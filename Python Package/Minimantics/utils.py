@@ -109,6 +109,33 @@ class ExistElement(FlatMapFunction):
 		if value[positionOnTuple] == self.elementToFind:
 			collector.collect(True);
 
+# """
+# Name: EntropyCalculator
+# 
+# Classe utilizada para especificar uma GroupReduceFunction
+# Utilizada em BuildProfiles.py, calcula a entropia para uma palavra
+# 
+# Retorna a entropia de uma palavra
+#
+# Author: 23/07/2016 Matheus Mignoni
+# Modif:  21/09/2016 Matheus Mignoni
+#		  - Não retorna mais o dictionary de links
+#
+class EntropyCalculator(FlatMapFunction):
+	def flat_map(self, value, collector):
+		finalEntropy = 0.0;
+		palavra    = value[0];
+		dictLinks  = value[1][0];
+		totalCount = int(value[1][1]);
+
+		for entry in dictLinks.values():
+			p = (entry / totalCount)
+			finalEntropy = finalEntropy - (p * (math.log(p)));
+
+		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
+		collector.collect((palavra, totalCount, finalEntropy));
+
+
 """ GroupReduceFunction """
 # """
 # Name: NothingReduce
@@ -150,10 +177,10 @@ class DistinctReduce(GroupReduceFunction):
 #
 # Author: 23/07/2016 Matheus Mignoni
 class Adder(GroupReduceFunction):
-  def reduce(self, iterator, collector): #The reduce method. The function receives one call per group of elements.
-    word, count = iterator.next()
-    count += sum([x[1] for x in iterator])
-    collector.collect((word, count))
+	def reduce(self, iterator, collector): #The reduce method. The function receives one call per group of elements.
+		word, count = iterator.next()
+		count += sum([x[1] for x in iterator])
+		collector.collect((word, count))
 
 # """
 # Name: Listter
@@ -163,9 +190,9 @@ class Adder(GroupReduceFunction):
 # 
 # Author: 23/07/2016 Matheus Mignoni
 class Listter(GroupReduceFunction):
-  def reduce(self, iterator, collector):
-	for value in iterator:
-		collector.collect(value);
+	def reduce(self, iterator, collector):
+		for value in iterator:
+			collector.collect(value);
 
 # """
 # Name: LinksAndCounts
@@ -173,18 +200,38 @@ class Listter(GroupReduceFunction):
 # Classe utilizada para especificar uma GroupReduceFunction
 # Utilizada em BuildProfiles.py Gera a lista de links e o somatório count para cada palavra
 # 
+# Retorna uma tupla contendo (Palavra, links, countTotal)
+# onde countTotal é count total da palavra
+# e linkList é a lista de links que a palavra tem, juntamente com o valor de cada link => ((link1, count1), ..., (linkN, countN))
+#
 # Author: 23/07/2016 Matheus Mignoni
-class LinksAndCounts(GroupReduceFunction):
-  def reduce(self, iterator, collector):   
-    linksList = [];
-    count     = 0;
+class TargetsLinksAndCounts(GroupReduceFunction):
+	def reduce(self, iterator, collector):  
+		dictLinks = {};
+		count     = 0;
+		for x in iterator:
+			count = count + int(x[2]);
+			if x[1] in dictLinks.keys():
+				dictLinks[x[1]] = dictLinks[x[1]] + int(x[2]);
+			else:
+				dictLinks[x[1]] = int(x[2]);
 
-    for x in interator:
-    	count += x[1]
-    	linksList.append(x[0]);
+		collector.collect((x[0], (dictLinks, count)));
 
-    collector.collect((linksList, count))
-
+class ContextLinksAndCounts(GroupReduceFunction):
+	def reduce(self, iterator, collector):  
+		dictLinks = {};
+		count     = 0;
+		
+		for x in iterator:
+			count = count + int(x[2]);
+			if x[0] in dictLinks.keys():
+				dictLinks[x[0]] = dictLinks[x[0]] + int(x[2]);
+			else:
+				dictLinks[x[0]] = int(x[2]);
+		
+		if x:
+			collector.collect((x[1], (dictLinks, count)));
 
 """ CoGroupFunction """
 # """
@@ -249,8 +296,23 @@ class RightJoinCoGroup(CoGroupFunction):
 			for value in dvals:
 				collector.collect( value );
 
+
 """ JoinFunctions """
-class PointWeighter(JoinFunction):
-	def join(self, pairWords, dataset2):
-		if (dataset2[1]):
-			return (pairWords[0], dataset2[1] * pairWords[1])
+# """
+# Name: RightJoinCoGroup
+# 
+# Classe utilizada para especificar uma JoinFunctions
+# Utilizado em BuildProfiles.py, faz o append apenas do count total e da entropy de um palavra
+# 
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class JoinTargetsCountAndEntropy(JoinFunction):
+	def join(self, value1, value2):
+		return (value1[0], value1[1], value1[2], (value2[1], value2[2]) );
+
+class JoinContextsCountAndEntropy(JoinFunction):
+	def join(self, value1, value2):
+		return (value1[0], value1[1], value1[2], value1[3], (value2[1], value2[2]) );
+
+
+
