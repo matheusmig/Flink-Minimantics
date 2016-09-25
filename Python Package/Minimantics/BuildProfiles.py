@@ -31,7 +31,7 @@ def buildProfiles(env, filterRawOutput, args):
 	" Processa entrada para ficar no formato: (target, context, valor) 
 	"""
 	if bSaveOutput: # Entrada da função será lida de arquivo => ((target, context), valor) 
-		rawData = env.read_text("/Volumes/MATHEUS/TCC/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
+		rawData = env.read_text("/home/mmignoni/Flink-Minimantics/Input/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
 
 	else: # Entrada é recebida por parametro  
 		rawData = filterRawOutput.map(lambda tuple: (tuple[0][0], tuple[0][1], tuple[1])); #converte de ((target, context), valor) para: (target, context, valor)
@@ -58,15 +58,15 @@ def buildProfiles(env, filterRawOutput, args):
 	ContextsEntropy = contextWithLinksAndCounts.flat_map(EntropyCalculator()); #Gera: (context, count, entropy))
 
 	#Junta os dados
-#	TargetsEntropy.write_text(strOutputFile+".TargetsEntropy.txt", WriteMode.OVERWRITE );
-	b = TargetsEntropy; so ESTA FUNCIONANDO SE FAZEMOS WRITE_TEXT, WHY?
-#	rawData.write_text(strOutputFile+".rawData.txt", WriteMode.OVERWRITE );
+	TargetsEntropy.write_text(strOutputFile+".TargetsEntropy.txt", WriteMode.OVERWRITE );
+	rawData.write_text(strOutputFile+".rawData.txt", WriteMode.OVERWRITE );
+
 	JoinedTargetsEntropy = rawData.join(b).where(0).equal_to(0).using(JoinTargetsCountAndEntropy());
-#	JoinedTargetsEntropy.write_text(strOutputFile+".JoinedTargetsEntropy.txt", WriteMode.OVERWRITE );
-	return 2;
+	JoinedTargetsEntropy.write_text(strOutputFile+".JoinedTargetsEntropy.txt", WriteMode.OVERWRITE );
+
 	# Esta é a parte com o maior volume de dados desta etapa
-#	JoinedTargetsAndContextsEntropy = JoinedTargetsEntropy.join(ContextsEntropy).where(1).equal_to(0).using(JoinContextsCountAndEntropy());
-#	JoinedTargetsAndContextsEntropy.write_text(strOutputFile+".JoinedTargetsAndContextsEntropy.txt", WriteMode.OVERWRITE );
+	JoinedTargetsAndContextsEntropy = JoinedTargetsEntropy.join(ContextsEntropy).where(1).equal_to(0).using(JoinContextsCountAndEntropy());
+	JoinedTargetsAndContextsEntropy.write_text(strOutputFile+".JoinedTargetsAndContextsEntropy.txt", WriteMode.OVERWRITE );
 	
 	""" 
 	" Calculate Profiles and prepare for output "
@@ -87,3 +87,4 @@ def buildProfiles(env, filterRawOutput, args):
 #		utils.saveToSSV(outputRdd, "SPARKmini.1.profiles")
 #
 #	return outputRdd
+	return 1
