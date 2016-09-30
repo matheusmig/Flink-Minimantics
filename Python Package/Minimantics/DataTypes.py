@@ -5,6 +5,7 @@
 Data Types Module
 """
 import math
+import struct
 from flink.functions.GroupReduceFunction import GroupReduceFunction
 
 """ 
@@ -19,7 +20,7 @@ c_BuildProfilesOutputFile = "BuildProfilesOutput"
 """ 
 Classes
 """
-class Profile:
+class Profile(object):
 	#Construtor com 8 parâmetros básicos, infere os outros 10 parâmetros a partir dos básicos.
 	def __init__(self, target, context, targetContextCount, targetCount, contextCount, entropy_target, entropy_context, nPairs):
 		self.target = target;
@@ -110,6 +111,60 @@ class Profile:
 	def returnHeader():
 		return "target context f_tc f_t f_c entropy_target entropy_context cond_prob pmi npmi lmi tscore zscore dice chisquare loglike affinity"
 
+class ProfileSerializer(object):
+	def serialize(self, value):
+		#Define formato de serialização das strings
+
+		#Target String
+		target_size  = len(value.target)
+		target_fmt   = "{}s".format(target_size)
+
+		#Context String
+		context_size = len(value.context)
+		context_fmt  = "{}s".format(context_size)
+
+		#Final Format
+		bufferFormat = ">i"+target_fmt+"i"+context_fmt+"qqqffq"; #target_size, target, con9text_size, context, targetContextCount, targetCount, contextCount, entropy_target, entropy_context, nPairs
+		return struct.pack(bufferFormat, target_size, bytes(value.target, 'utf8'), context_size, bytes(value.context, 'utf8'), int(value.targetContextCount), int(value.targetCount), int(value.contextCount), float(value.entropy_target), float(value.entropy_context), int(value.nPairs))
+
+class ProfileDeserializer(object):
+	def _deserialize(self, read):
+		nStart = 0;
+
+		#Target
+		target_size = struct.unpack(">i", read[nStart:nStart+4])
+		nStart = nStart + 4;
+
+		target = read[nStart : nStart+target_size].decode("utf-8");
+		nStart = nStart + target_size;
+
+		#Context
+		context_size = struct.unpack(">i", read[nStart:nStart+4])
+		nStart = nStart + 4;
+
+		context = read[nStart : nStart+context_size].decode("utf-8");
+		nStart = nStart + context_size;
+
+		#targetContextCount
+		targetContextCount = struct.unpack(">q", read[nStart:nStart+8])
+		nStart = nStart + 8;        
+		#targetCount
+		targetCount = struct.unpack(">q", read[nStart:nStart+8])
+		nStart = nStart + 8;      
+		#contextCount
+		contextCount = struct.unpack(">q", read[nStart:nStart+8])
+		nStart = nStart + 8;      
+		#entropy_target
+		entropy_target = struct.unpack(">f", read[nStart:nStart+4])
+		nStart = nStart + 4;  
+		#context_target
+		context_target = struct.unpack(">f", read[nStart:nStart+4])
+		nStart = nStart + 4;  		
+		#nPairs
+		nPairs = struct.unpack(">q", read[nStart:nStart+8])
+		nStart = nStart + 8;    
+
+		return Profile(target, context, targetContextCount, targetCount, contextCount, entropy_target, context_target, nPairs);
 
 class SimilarityResult:
 	def __init__(self):
@@ -134,13 +189,5 @@ class SimilarityResult:
 	def returnHeader():
 		return "target\tneighbor\tcosine\twjaccard\tlin\tl1\tl2\tjsd\trandom\taskew";
 	
-"""
-Flink User-defined functions
-"""
-class Adder(GroupReduceFunction):
-  def reduce(self, iterator, collector):
-    count, word = iterator.next()
-    count += sum([x[0] for x in iterator])
-    collector.collect((count, word))
 
 

@@ -9,6 +9,7 @@ from flink.plan.DataSet import *
 from operator import add
 
 from Minimantics.utils import *
+from Minimantics.DataTypes import *
 from Minimantics.FilterRaw import *
 from Minimantics.BuildProfiles import *
 #from DataTypes import *
@@ -128,6 +129,9 @@ def main( opts ):
 		print ("[ Will generate output files at each step ]")
 	else:
 		print ("[ Only will generate output file at the end ]")
+
+	#Registra custom types 
+	env.register_type(Profile, ProfileSerializer(), ProfileDeserializer());
 
 	#PROCESS
 	process (None)

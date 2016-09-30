@@ -9,6 +9,7 @@ from flink.functions.FlatMapFunction     import FlatMapFunction
 from flink.functions.GroupReduceFunction import GroupReduceFunction
 from flink.functions.CoGroupFunction     import CoGroupFunction
 from flink.functions.JoinFunction        import JoinFunction
+from flink.functions.ReduceFunction      import ReduceFunction
 """
 Utils Functions Module
 """
@@ -80,11 +81,10 @@ Flink User-defined functions
 
 
 """ MapFunctions """
-
 # """
 # Name: PrintValues
 # 
-# Classe utilizada para especificar uma FlatMapFunction
+# Classe utilizada para especificar uma MapFunction
 # Printa na tela todos os valores de um dataset
 # 
 # Author: 23/07/2016 Matheus Mignoni
@@ -93,6 +93,18 @@ class PrintValues(MapFunction):
 	def map(self, value):
 		print(value);
 
+# """
+# Name: Profiler
+# 
+# Classe utilizada para especificar uma MapFunction
+# Cria os objetos de Profile
+# 
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class Profiler(MapFunction):
+	def map(self, tuple):
+		pairsSum = self.context.get_broadcast_variable("broadcastPairs")[0];
+		return Profile(tuple[0], tuple[1], float(tuple[2]), float(tuple[3][0]), float(tuple[4][0]), float(tuple[3][1]), float(tuple[4][1]), int(pairsSum));
 
 """ FlatMapFunctions """
 # """
@@ -115,7 +127,7 @@ class ExistElement(FlatMapFunction):
 # """
 # Name: EntropyCalculator
 # 
-# Classe utilizada para especificar uma GroupReduceFunction
+# Classe utilizada para especificar uma FlatMapFunction
 # Utilizada em BuildProfiles.py, calcula a entropia para uma palavra
 # 
 # Retorna a entropia de uma palavra
@@ -138,6 +150,19 @@ class EntropyCalculator(FlatMapFunction):
 		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
 		collector.collect((palavra, totalCount, finalEntropy));
 
+""" ReduceFunction """
+# """
+# Name: AddIntegers
+# 
+# Classe utilizada para especificar uma ReduceFunction
+# Retorna a soma dos dois elementos
+# 
+#
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class AddIntegers(ReduceFunction):
+    def reduce(self, value1, value2):
+    	return int(value1) + int(value2);
 
 """ GroupReduceFunction """
 # """
@@ -184,6 +209,7 @@ class Adder(GroupReduceFunction):
 		word, count = iterator.next()
 		count += sum([x[1] for x in iterator])
 		collector.collect((word, count))
+
 
 # """
 # Name: Listter
