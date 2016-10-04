@@ -40,9 +40,7 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	" nPairs => soma de todos os valores* (terceiro elemento da tupla: (target, context, valor))"
 	"""
-	# 1. The DataSet to be broadcasted
 	nPairs = rawData.map(lambda tuple: tuple[2]).reduce(AddIntegers());
-	nPairs.write_text(strOutputFile+".nPairs.txt", WriteMode.OVERWRITE );
 
 	"""
 	" targetWithLinksAndCounts  => target com sua lista de links e sua contagem: (target,  (links, sum(target valor))) 
@@ -70,8 +68,8 @@ def buildProfiles(env, filterRawOutput, args):
 	" Calculate Profiles and prepare for output "
 	"""
 	OutputData = JoinedTargetsAndContextsEntropy.map(Profiler())\
-												.with_broadcast_set("broadcastPairs", nPairs);
-												#.map(lambda profile: profile.returnResultAsStr);
+												.with_broadcast_set("broadcastPairs", nPairs)\
+												.map(lambda profile: profile.returnResultAsStr());
 
 	"""
 	" Output data "
@@ -83,4 +81,4 @@ def buildProfiles(env, filterRawOutput, args):
 	if bSaveOutput:
 		outputRdd.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
 
-	return outputRdd;
+		return outputRdd;

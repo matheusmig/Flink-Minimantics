@@ -103,9 +103,9 @@ class PrintValues(MapFunction):
 # """
 class Profiler(MapFunction):
 	def map(self, tuple):
-		pairsSum = self.context.get_broadcast_variable("broadcastPairs")[0];
-		return Profile(tuple[0], tuple[1], float(tuple[2]), float(tuple[3][0]), float(tuple[4][0]), float(tuple[3][1]), float(tuple[4][1]), int(pairsSum));
-
+		pairsSum = self.context.get_broadcast_variable("broadcastPairs");
+		return Profile(tuple[0], tuple[1], int(tuple[2]), int(tuple[3][0]), int(tuple[4][0]), tuple[3][1], tuple[4][1], int(pairsSum[0]));
+		
 """ FlatMapFunctions """
 # """
 # Name: ExistElement

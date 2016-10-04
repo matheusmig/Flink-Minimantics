@@ -131,7 +131,7 @@ def main( opts ):
 		print ("[ Only will generate output file at the end ]")
 
 	#Registra custom types 
-	env.register_type(Profile, ProfileSerializer(), ProfileDeserializer());
+	#env.register_type(Profile, ProfileSerializer(), ProfileDeserializer());
 
 	#PROCESS
 	process (None)
