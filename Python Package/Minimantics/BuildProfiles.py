@@ -74,11 +74,9 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	" Output data "
 	"""		
-	outputHeaderRDD = env.from_elements(Profile.returnHeader());
-
-	outputRdd = outputHeaderRDD.union(OutputData)
-
 	if bSaveOutput:
+		outputHeaderRDD = env.from_elements(Profile.returnHeader());
+		outputRdd = outputHeaderRDD.union(OutputData)
 		outputRdd.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
 
-		return outputRdd;
+	return outputRdd;

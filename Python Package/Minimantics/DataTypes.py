@@ -195,7 +195,7 @@ class ProfileDeserializer(object):
 
 		return Profile(target, context, targetContextCount, targetCount, contextCount, entropy_target, context_target, nPairs);
 
-class SimilarityResult:
+class Similarity(object):
 	def __init__(self):
 		self.target1  = "";
 		self.target2  = "";
@@ -217,6 +217,73 @@ class SimilarityResult:
 	@staticmethod
 	def returnHeader():
 		return "target\tneighbor\tcosine\twjaccard\tlin\tl1\tl2\tjsd\trandom\taskew";
-	
+
+class SimilaritySerializer(object):
+	def serialize(self, value):
+		#Define formato de serialização das strings
+
+		#Target String
+		target1Encoded = value.target1.encode('utf8')
+		target1_size  = len(target1Encoded)
+		target1_fmt   = "{}s".format(target1_size)
+
+		#Context String
+		target2Encoded = value.target2.encode('utf8')
+		target2_size = len(target2Encoded)
+		target2_fmt  = "{}s".format(target2_size)
+
+		#Final Format
+		bufferFormat = ">i"+target1_fmt+"i"+target2_fmt+"9q"; #target_size, target, target2_size, target2, cosine, wjaccard, lin, l1, l2 jsd, random, askew1, askew2
+		return struct.pack(bufferFormat, target1_size, target1Encoded, target2_size, target2Encoded, float(value.cosine), float(value.wjaccard), float(value.lin), float(value.l1), float(value.l2), float(value.jsd), float(value.random), float(value.askew1), float(value.askew2))
+
+class SimilarityDeserializer(object):
+	def _deserialize(self, read):
+		#See: Slice Notation http://stackoverflow.com/questions/509211/explain-pythons-slice-notation
+		nStart = 0;
+
+		#Target
+		target1_size = struct.unpack(">i", read[nStart:nStart+4])[0] #unpack retorna sempre uma tupla
+		nStart = nStart + 4;
+
+		target1 = read[nStart:nStart+target1_size].decode("utf-8");
+		nStart = nStart + target1_size;
+
+		#Context
+		target2_size = struct.unpack(">i", read[nStart:nStart+4])[0]
+		nStart = nStart + 4;
+
+		target2 = read[nStart:nStart+target2_size].decode("utf-8");
+		nStart = nStart + target2_size;
+
+		#cosine
+		cosine = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   		
+  		#wjaccard
+		wjaccard = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;  
+		#lin
+		lin = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#l1
+		l1 = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#l2
+		l2 = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#jsd
+		jsd = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#random
+		random = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#askew1
+		askew1 = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+		#askew2
+		askew2 = struct.unpack(">q", read[nStart:nStart+8])[0]
+		nStart = nStart + 8;   
+
+
+		return Similarity(target1, target2, cosine, wjaccard, lin, l1, l2, jsd, random, askew1, askew2);
 
 

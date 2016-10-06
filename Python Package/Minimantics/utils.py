@@ -10,6 +10,7 @@ from flink.functions.GroupReduceFunction import GroupReduceFunction
 from flink.functions.CoGroupFunction     import CoGroupFunction
 from flink.functions.JoinFunction        import JoinFunction
 from flink.functions.ReduceFunction      import ReduceFunction
+from flink.functions.FilterFunction      import FilterFunction
 """
 Utils Functions Module
 """
@@ -106,6 +107,7 @@ class Profiler(MapFunction):
 		pairsSum = self.context.get_broadcast_variable("broadcastPairs");
 		return Profile(tuple[0], tuple[1], int(tuple[2]), int(tuple[3][0]), int(tuple[4][0]), tuple[3][1], tuple[4][1], int(pairsSum[0]));
 		
+
 """ FlatMapFunctions """
 # """
 # Name: ExistElement
@@ -261,6 +263,49 @@ class ContextLinksAndCounts(GroupReduceFunction):
 		
 		if x:
 			collector.collect((x[1], (dictLinks, count)));
+
+# """
+# Name: TargetContextsGrouper
+# 
+# Classe utilizada para especificar uma GroupReduceFunction
+# Mapeia as informações de um target e seus contexts
+# 
+# Author: 23/07/2016 Matheus Mignoni
+class TargetContextsGrouper(GroupReduceFunction):
+	def reduce(self, iterator, collector):
+		sum 	     = 0;
+		sum_square   = 0;
+		dictContexts = dict();
+
+		for key,value in iterator:
+			sum += value[0]
+			sum_square += value[1]
+			if value[2][0] in dictContexts.keys():
+				dictContexts[value[2][0]] = dictContexts[value[2][0]] + value[2][1]
+			else:
+				dictContexts[value[2][0]] = value[2][1]
+
+		collector.collect( (key,(sum, sum_square, (dictContexts.items()))) ); #collector nao suporta Dict, mandamos apenas os itens
+
+""" FilterFunction """
+# """
+# Name: FilterFromList
+# 
+# Filtra valores que não estão na lista passada por parâmetro
+# 
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class FilterFromList(FilterFunction):
+	def __init__(self, index, list):
+		self.index = index;
+		self.list = list;
+
+	def filter(self, value):
+		if value[self.index] not in self.list:
+			return True
+		else:
+			return False
+
 
 """ CoGroupFunction """
 # """

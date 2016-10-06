@@ -4,10 +4,13 @@
 """ 
 Calculate Similarity Module
 """
-from utils import *
+from .utils import *
+from .DataTypes import *
+
 from operator import add
 from math import *
 from random import *
+from flink.plan.DataSet import *
 
 """
    OBS: Esta função apenas leva em consideração os itens com cabeçalho:
@@ -15,29 +18,7 @@ from random import *
    affinity, entropy_target, entropy_context 
 """
 
-""" Global Vars"""
-#Posição dos elementos nos dados
-targetIndex				= 0
-contextIndex			= 0
-targetContextCountIndex = 0
-targetCountIndex    	= 0
-contextCountIndex		= 0
-entropy_targetIndex		= 0
-entropy_contextIndex	= 0
-condProbIndex	  		= 0
-pmiIndex	       		= 0
-npmiIndex	      		= 0
-lmiIndex	       		= 0
-tscoreIndex	    		= 0
-zscoreIndex	    		= 0
-diceIndex	      		= 0
-chisquareIndex	 		= 0
-loglikeIndex	   		= 0
-affinityIndex	  		= 0
-
 #Argumentos
-bSaveOutput = False;
-
 #
 bCalculateDistance = True;
 
@@ -52,11 +33,11 @@ contextDictionary = {}
 # 
 # Author: 23/07/2016 Matheus Mignoni
 # """
-def calculateSimilarity(sc, buildProfilesOutput, args):
+def calculateSimilarity(env, buildProfilesOutput, args):
 	"""
 	" Inicialização de variáveis conforme argumentos de entrada "
 	"""
-	global bSaveOutput
+	strOutputFile = vars(args)['OutFile'];
 	bSaveOutput 				= vars(args)['GenerateSteps']
 	AssocName   				= vars(args)['AssocName']	
 	minScores 					= vars(args)['Scores']				     
@@ -72,19 +53,92 @@ def calculateSimilarity(sc, buildProfilesOutput, args):
 	" Lê entrada
 	"""
 	if bSaveOutput: # Entrada da função será lida de arquivo
-		input = sc.textFile(c_HdfsPath + "mini.1.profiles" ).map(lambda line: (line.split("\t")));
+		profiles = env.read_text("/Volumes/MATHEUS/TCC/mini.1.profiles" ).map(lambda line: (line.split("\t")));
 	else: 		    # Entrada é recebida em memória 
-		input = buildProfilesOutput;
+		profiles = buildProfilesOutput;
 
 	"""
 	" Processa entrada, extraindo header e filtrando dados
 	"""
-	(header, rawData, data) = extractInput(input, nAssocThreshold, lstTargetsWordsFiltered, lstNeighborWordsFiltered, lstContextWordsFiltered);
+
+#   VERSAO 2 --> header não é mais utilizado
+#
+#	#Extrai Header e suas informações
+#	header = profiles.first(1)  
+#	if bSaveOutput:
+#		#Veio do arquivo, contém cabecalho
+#		lstHeader = header; 
+#	else:
+#		#Veio da memória, o cabeçalho está com os elementos separados por virgula
+#		lstHeader = header.split(" "); #Transforma header em uma lista
+#
+#	#Conseguiremos acessar a posição correta dos itens, através da sua localização no header.
+#	#p.ex, se quisermos pegar o target, basta acessamos o indice contido em header.index('target'));
+
+
+	targetIndex 			= 0  #lstHeader.index('target');
+	contextIndex 			= 2  #lstHeader.index('context')
+	targetContextCountIndex	= 3  #lstHeader.index('f_tc')
+	targetCountIndex 		= 4  #lstHeader.index('f_t')
+	contextCountIndex		= 5  #lstHeader.index('f_c')
+	entropy_targetIndex		= 6  #lstHeader.index('entropy_target')
+	entropy_contextIndex 	= 7  #lstHeader.index('entropy_context')
+	condProbIndex	  		= 8  #lstHeader.index('cond_prob')
+	pmiIndex 				= 9  #lstHeader.index('pmi')
+	npmiIndex	      		= 10  #lstHeader.index('npmi')
+	lmiIndex 				= 11 #lstHeader.index('lmi')
+	tscoreIndex	    		= 12 #lstHeader.index('tscore')
+	zscoreIndex	    		= 13 #lstHeader.index('zscore')
+	diceIndex	      		= 14 #lstHeader.index('dice')
+	chisquareIndex	 		= 15 #lstHeader.index('chisquare')
+	loglikeIndex 			= 16 #lstHeader.index('loglike')
+	affinityIndex	  		= 17 #lstHeader.index('affinity')
+
+	""" 
+	" Dados 
+	"""
+#   Header foi removido, não é mais necessário separar entre Header e Data
+#	data = profiles.filter(lambda x: x != header[0]); 
+
+	""" 
+	Filtra dados: 
+	   - score menores que o limite de AssocThresh
+	   - targets na lista de targets a ignorar
+	   - context na lista de context a ignorar
+	   - targets na lista de neighboors a ignorar 
+	"""
+	filteredData = profiles.filter( lambda tuple: float(tuple[targetContextCountIndex]) >= nAssocThreshold)\
+	                       .filter( FilterFromList(targetIndex , lstTargetsWordsFiltered))\
+	                       .filter( FilterFromList(contextIndex, lstContextWordsFiltered))\
+	                       .filter( FilterFromList(targetIndex , lstNeighborWordsFiltered));
+
+	if bSaveOutput:
+		filteredData.write_text(strOutputFile+".SimilarityFilteredData.txt", WriteMode.OVERWRITE );
+
+	""" O código original em C, utilizava uma estrutura chamada targets_context para armazenar os targets, suas somas e sua lista de contexts. 
+	# Replicaremos o mesmo comportamente através de um simples tupla, para facilitar processamento (apesar de dificultar manutenção(?))
+	# Tupla é (key,value) onde: 
+	# 	key   = target 
+	# 	value = (sum, sum_square, contextsList) 
+	#
+	# contextsList é uma lista de (context, valor)
+	#
+	# Primeiramente mapearemos para as tuplas e depois faremos o agrupamento dos targets iguais """
+	targetContexts = filteredData.map(lambda tuple: (tuple[targetIndex], (float(tuple[targetContextCountIndex]), float(tuple[targetContextCountIndex])*float(tuple[targetContextCountIndex]), ( tuple[contextIndex], float(tuple[targetContextCountIndex]) ) ) ))\
+							     .group_by(0).reduce_group(TargetContextsGrouper());
+    
+	if bSaveOutput:
+		targetContexts.write_text(strOutputFile+".SimilarityTargetContextes.txt", WriteMode.OVERWRITE );
+
 
 
 	""" Cacula similaridade """
 	# Faz a combinação cartesiana de todos os targets, junto com sua soma, soma quadrática e lista de contexts
-	targetsCartesian = data.cartesian(data);
+	targetsCartesian = targetContexts.cartesian(targetContexts);
+
+	if bSaveOutput:
+		targetsCartesian.write_text(strOutputFile+".SimilarityTargetsCartesian.txt", WriteMode.OVERWRITE );
+
 	
 	#As funções dentro de calc_sim são python puro, pois elas não conseguem ser processadas pela DAG do SPark.
 	#TODO: Como aumentar a eficiência de processamento paralelo nessa parte?
@@ -97,12 +151,14 @@ def calculateSimilarity(sc, buildProfilesOutput, args):
 	# sum2 		   = i[1][1][0];
 	# sum_square2  = i[1][1][1];
 	# contextDict2 = i[1][1][2];
-	listCalculatedSimilarities = targetsCartesian.map( lambda tuple: calc_sim(tuple[0][0], tuple[1][0], tuple[0][1][2], tuple[1][1][2], tuple[0][1][0], tuple[0][1][1], tuple[1][1][0], tuple[1][1][1]));
-			
-
-	""" Processa formato de saída """					      
-	listOutputFinal = []; #Lista com o resultado final
-	listOutputFinal = listCalculatedSimilarities.map( lambda sim: sim.returnResultAsStr()).collect();
+    listCalculatedSimilarities = targetsCartesian.map( lambda tuple: calc_sim(tuple[0][0], tuple[1][0], tuple[0][1][2], tuple[1][1][2], tuple[0][1][0], tuple[0][1][1], tuple[1][1][0], tuple[1][1][1]));
+    listCalculatedSimilarities = targetsCartesian.flat_map( lambda tuple: Similaritier();
+    
+#			
+#
+#	""" Processa formato de saída """					      
+#	listOutputFinal = []; #Lista com o resultado final
+#	listOutputFinal = listCalculatedSimilarities.map( lambda sim: sim.returnResultAsStr()).collect();
 
 
 # Antiga forma de percorrer a lista de targets cartesian, com python puro:
@@ -124,118 +180,22 @@ def calculateSimilarity(sc, buildProfilesOutput, args):
 
 
 
-	"""
-	" Output data "
-	"""	
-	outputHeaderRDD = sc.parallelize( [SimilarityResult.returnHeader()] ) ;
-	outputDataRdd   = sc.parallelize(listOutputFinal)
-
-	outputRdd = outputHeaderRDD.union(outputDataRdd)	
-
-	if bSaveOutput:
-		saveToSSV(outputRdd, "mini.1.sim-th0.2")
-
-	return outputRdd
-
-
+#	"""
+#	" Output data "
+#	"""	
+#	outputHeaderRDD = sc.parallelize( [SimilarityResult.returnHeader()] ) ;
+#	outputDataRdd   = sc.parallelize(listOutputFinal)
+#
+#	outputRdd = outputHeaderRDD.union(outputDataRdd)	
+#
+#	if bSaveOutput:
+#		saveToSSV(outputRdd, "mini.1.sim-th0.2")
+#
+#	return outputRdd
 
 
-# """
-# Name: extractInput
-# 
-# Dado o arquivo de entrada, extrai cabeçalho e filtra os dados
-# Retorna os dados de entrada como uma lista de objetos 
-# 
-# Author: 23/07/2016 Matheus Mignoni
-# """
-def extractInput(buildProfilesOutput, nAssocThresh, lstTargetsWordsFiltered, lstContextWordsFiltered, lstNeighborWordsFiltered):
-	""" 
-	" Cabeçalho 
-	"""
-	header = buildProfilesOutput.first()  
 
-	""" 
-	" Dados 
-	"""
-	data = buildProfilesOutput.filter(lambda x: x != header); #removeheader
-
-	#Conseguiremos acessar a posição correta dos itens, através da sua localização no header.
-	#p.ex, se quisermos pegar o target, basta acessamos o indice contido em header.index('target'));
-	global targetIndex
-	global contextIndex				
-	global targetContextCountIndex	
-	global targetCountIndex    		
-	global contextCountIndex		
-	global entropy_targetIndex		
-	global entropy_contextIndex		
-	global condProbIndex	  		
-	global pmiIndex	       			
-	global npmiIndex	      		
-	global lmiIndex	       			
-	global tscoreIndex	    		
-	global zscoreIndex	    		
-	global diceIndex	      		
-	global chisquareIndex	 		
-	global loglikeIndex	   			
-	global affinityIndex	
-	global bSaveOutput  		
-
-	if bSaveOutput:
-		#Veio do arquivo, o cabecalho já é uma lista
-		lstHeader = header; 
-	else:
-		#Veio da memória, o cabeçalho está com os elementos separados por virgula
-		lstHeader = header.split(" "); #Transforma header em uma lista
-
-	targetIndex 			= lstHeader.index('target');
-	contextIndex 			= lstHeader.index('context')
-	targetContextCountIndex	= lstHeader.index('f_tc')
-	targetCountIndex 		= lstHeader.index('f_t')
-	contextCountIndex		= lstHeader.index('f_c')
-	entropy_targetIndex		= lstHeader.index('entropy_target')
-	entropy_contextIndex 	= lstHeader.index('entropy_context')
-	condProbIndex	  		= lstHeader.index('cond_prob')
-	pmiIndex 				= lstHeader.index('pmi')
-	npmiIndex	      		= lstHeader.index('npmi')
-	lmiIndex 				= lstHeader.index('lmi')
-	tscoreIndex	    		= lstHeader.index('tscore')
-	zscoreIndex	    		= lstHeader.index('zscore')
-	diceIndex	      		= lstHeader.index('dice')
-	chisquareIndex	 		= lstHeader.index('chisquare')
-	loglikeIndex 			= lstHeader.index('loglike')
-	affinityIndex	  		= lstHeader.index('affinity')
-
-	""" 
-	Filtra dados: 
-	   - score menores que o limite de AssocThresh
-	   - targets na lista de targets a ignorar
-	   - context na lista de context a ignorar
-	   - targets na lista de neighboors a ignorar 
-	"""
-	filteredData = data.filter(lambda tuple: float(tuple[targetContextCountIndex]) >= nAssocThresh\
-									     and tuple[targetIndex]  not in lstTargetsWordsFiltered\
-										 and tuple[contextIndex] not in lstContextWordsFiltered\
-										 and tuple[targetIndex]  not in lstNeighborWordsFiltered);
-
-	""" O código original em C, utilizava uma estrutura chamada targets_context para armazenar os targets, suas somas e sua lista de contexts. 
-	# Replicaremos o mesmo comportamente através de um simples tupla, para facilitar processamento (apesar de dificultar manuteção(?))
-	# Tupla é (key,value) onde: 
-	# 	key = target 
-	# 	value = (sum, sum_square, contexts) 
-	#
-	# contexts é uma lista de (context, valor)
-	#
-	# Primeiramente mapearemos para as tuplas e depois faremos o agrupamento dos targets iguais """
-	targetContexts = filteredData.map(lambda tuple: (tuple[targetIndex], (float(tuple[targetContextCountIndex]), float(tuple[targetContextCountIndex])*float(tuple[targetContextCountIndex]), { tuple[contextIndex]: float(tuple[targetContextCountIndex]) } ) ))\
-							     .combineByKey(lambda value:    (value[0], value[1], value[2]),
-                           					   lambda x, value: (x[0] + value[0], x[1] + value[1], dict(x[2].items() | value[2].items())),
-                           				  	   lambda x, y:     (x[0] + y[0], x[1] + y[1], x[2].update(y[2]) ))\
-							     .sortByKey();
-	#Uma linha do TargetContexts é ex: ( accept,    (28.0,  214.0,         { 'demand': 3.0, 'plan': 12.0, 'offer': 2.0, 'decision': 2.0, 'refugee': 2.0, 'proposal': 7.0}) )
-    #                                      ^target  ^sum     ^sum_square      ^dicionario com context : value
-
-	return (header, filteredData, targetContexts);
-
+	
 # """
 # Name: calc_sim
 # 
@@ -248,6 +208,7 @@ def calc_sim(target, neighbor, contextList1, contextList2, sum1, sum_square1, su
 	""" Inicializações """
 	result = SimilarityResult();
 	sumsum = 0.0
+	
 	for key1, value1 in contextList1.items():
 		v1 = contextList1[key1];
 		if key1 in contextList2:  # The context is shared by both target

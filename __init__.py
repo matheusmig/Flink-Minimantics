@@ -12,10 +12,7 @@ from Minimantics.utils import *
 from Minimantics.DataTypes import *
 from Minimantics.FilterRaw import *
 from Minimantics.BuildProfiles import *
-#from DataTypes import *
-#from FilterRaw import filter
-#from BuildProfiles import buildProfiles
-#from CalculateSimilarity import calculateSimilarity
+from Minimantics.CalculateSimilarity import *
 
 import sys, argparse
 from datetime import datetime
@@ -100,7 +97,7 @@ def process( master ):
 		Calculate Similarity
 		"""
 		print ('*** STEP 3 : CALCULATING SIMILARITY ***')
-		#calculateSimilarity(sc, buildProfilesOutput, args);
+		calculateSimilarity(env, buildProfilesOutput, args);
 
 
 
@@ -131,7 +128,8 @@ def main( opts ):
 		print ("[ Only will generate output file at the end ]")
 
 	#Registra custom types 
-	#env.register_type(Profile, ProfileSerializer(), ProfileDeserializer());
+	env.register_type(Profile   , ProfileSerializer()   , ProfileDeserializer());
+	env.register_type(Similarity, SimilaritySerializer(), SimilarityDeserializer());
 
 	#PROCESS
 	process (None)
