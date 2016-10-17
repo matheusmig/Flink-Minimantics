@@ -6,7 +6,9 @@ Data Types Module
 """
 import math
 import struct
+import pickle
 import decimal
+import json
 from flink.functions.GroupReduceFunction import GroupReduceFunction
 
 """ 
@@ -201,7 +203,7 @@ class Similarity(object):
 		self.target2  = "";
 		self.cosine   = 0.0;
 		self.wjaccard = 0.0;
-		self.lin      = 0.0;       	
+		self.lin      = 0.0;
 		self.l1       = 0.0;
 		self.l2       = 0.0;
 		self.jsd      = 0.0;
@@ -238,52 +240,72 @@ class SimilaritySerializer(object):
 
 class SimilarityDeserializer(object):
 	def _deserialize(self, read):
-		#See: Slice Notation http://stackoverflow.com/questions/509211/explain-pythons-slice-notation
-		nStart = 0;
-
 		#Target
-		target1_size = struct.unpack(">i", read[nStart:nStart+4])[0] #unpack retorna sempre uma tupla
-		nStart = nStart + 4;
+		target1_size = struct.unpack(">i", read(4))[0] #unpack retorna sempre uma tupla
 
-		target1 = read[nStart:nStart+target1_size].decode("utf-8");
-		nStart = nStart + target1_size;
+		target1 = read(target1_size).decode("utf-8");
 
 		#Context
-		target2_size = struct.unpack(">i", read[nStart:nStart+4])[0]
-		nStart = nStart + 4;
+		target2_size = struct.unpack(">i", read(4))[0]
 
 		target2 = read[nStart:nStart+target2_size].decode("utf-8");
-		nStart = nStart + target2_size;
 
 		#cosine
-		cosine = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   		
-  		#wjaccard
-		wjaccard = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;  
+		cosine = struct.unpack(">q", read(8))[0]
+   		
+		#wjaccard
+		wjaccard = struct.unpack(">q", read(8))[0]
 		#lin
-		lin = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		lin = struct.unpack(">q", read(8))[0]
 		#l1
-		l1 = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		l1 = struct.unpack(">q", read(8))[0]
 		#l2
-		l2 = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		l2 = struct.unpack(">q", read(8))[0]
 		#jsd
-		jsd = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		jsd = struct.unpack(">q", read(8))[0]
 		#random
-		random = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		random = struct.unpack(">q", read(8))[0]
 		#askew1
-		askew1 = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
+		askew1 = struct.unpack(">q", read(8))[0]
 		#askew2
-		askew2 = struct.unpack(">q", read[nStart:nStart+8])[0]
-		nStart = nStart + 8;   
-
+		askew2 = struct.unpack(">q", read(8))[0]
 
 		return Similarity(target1, target2, cosine, wjaccard, lin, l1, l2, jsd, random, askew1, askew2);
+
+class DictOfContexts(object):
+	def __init__(self, dictContexts):
+		self.dict = dictContexts;
+
+	def returnResultAsStr(self):
+		return json.dumps(self.dict);
+
+
+class DictOfContextsSerializer(object):
+	def serialize(self, value):
+		#Serialize dicionario
+		dataSerialized = pickle.dumps(value.dict);
+
+		dataLength     = len(dataSerialized)
+		dataFormat     = "{}s".format(dataLength)
+
+		bufferFormat = ">i"+dataFormat;
+
+		return struct.pack(bufferFormat, dataLength, dataSerialized)
+
+
+class DictOfContextsDeserializer(object):
+	def deserialize(self, read):		
+		dataLength      = struct.unpack(">i", read(4))[0]
+
+		dataSerialized  = read(dataLength);
+		
+		#Deserialize dictionary
+		dictAux = pickle.loads(dataSerialized)
+		return DictOfContexts(dictAux);
+
+
+
+
+
 
 

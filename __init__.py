@@ -84,13 +84,14 @@ def process( master ):
 		"""
 		Filter Raw
 		"""
-		print ('*** STEP 1 : FILTERING RAW ***')
-		filterRawOutput = filterRawInput(env, data, args);
+#		print ('*** STEP 1 : FILTERING RAW ***')
+#		filterRawOutput = filterRawInput(env, data, args);
 		"""
 		Build Profiles
 		"""
-		print ('*** STEP 2 : BUILDING PROFILES ***')
-		buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
+		buildProfilesOutput = ""
+#		print ('*** STEP 2 : BUILDING PROFILES ***')
+#		buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
 
 
 		"""
@@ -128,8 +129,9 @@ def main( opts ):
 		print ("[ Only will generate output file at the end ]")
 
 	#Registra custom types 
-	env.register_type(Profile   , ProfileSerializer()   , ProfileDeserializer());
-	env.register_type(Similarity, SimilaritySerializer(), SimilarityDeserializer());
+	env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
+	env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
+	env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
 
 	#PROCESS
 	process (None)

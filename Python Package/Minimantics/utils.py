@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-
+import random
 from .DataTypes import *
 from math import *
+
+from flink.plan.Environment import get_environment
+from flink.plan.DataSet import *
 
 from flink.functions.MapFunction         import MapFunction
 from flink.functions.FlatMapFunction     import FlatMapFunction
@@ -66,14 +69,15 @@ def sizeOfDataset(ds):
 #	totalTime = endTime-startTime;
 #	print ("Total execution time was: %dms" %(int(totalTime.total_seconds() * 1000)))
 #
-##Relative Entropy Smooth
-#def relativeEntropySmooth(p1, p2):
-#	ALPHA  = 0.99  #Smoothing factors for a-skewness measure
-#	NALPHA = 0.01
-#	if (p1 == 0.0):
-#		return 0.0; #If p1=0, then product is 0. If p2=0, then smoothed  
-#	else:
-#		return p1 * log( p1 / (ALPHA * p2 + NALPHA * p1 ) );
+
+#Relative Entropy Smooth
+def relativeEntropySmooth(p1, p2):
+	ALPHA  = 0.99  #Smoothing factors for a-skewness measure
+	NALPHA = 0.01
+	if (p1 == 0.0):
+		return 0.0; #If p1=0, then product is 0. If p2=0, then smoothed  
+	else:
+		return p1 * log( p1 / (ALPHA * p2 + NALPHA * p1 ) );
 
 
 """
@@ -110,6 +114,23 @@ class Profiler(MapFunction):
 
 """ FlatMapFunctions """
 # """
+# Name: teste
+# 
+# Classe utilizada para especificar uma FlatMapFunction
+# apenas para testes// apagar
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class testeflatmap(FlatMapFunction):
+	def __init__(self, env):
+		self.env   = env;
+
+	def flat_map(self, value, collector):
+		a = self.env.from_elements('123', '123', '222')
+		a.map(lambda x: "333")
+		a.write_text("/Volumes/MATHEUS/TCC/a.txt", WriteMode.OVERWRITE );
+
+		collector.collect(True);
+# """
 # Name: ExistElement
 # 
 # Classe utilizada para especificar uma FlatMapFunction
@@ -138,6 +159,7 @@ class ExistElement(FlatMapFunction):
 # Modif:  21/09/2016 Matheus Mignoni
 #		  - Não retorna mais o dictionary de links
 #
+# """
 class EntropyCalculator(FlatMapFunction):
 	def flat_map(self, value, collector):
 		finalEntropy = 0.0;
@@ -152,6 +174,98 @@ class EntropyCalculator(FlatMapFunction):
 		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
 		collector.collect((palavra, totalCount, finalEntropy));
 
+
+# """
+# Name: Similaritier
+# 
+# Classe utilizada para especificar uma FlatMapFunction
+# Recebe dois targets com suas devidas listas de contexto, calcula a similaridade
+# 
+# Retorna a entropia de uma palavra
+#
+# Author: 23/07/2016 Matheus Mignoni
+#
+# """
+class Similaritier(FlatMapFunction):
+	def __init__(self, bCalculateDistance=None):
+		if bCalculateDistance is None:
+			self.bCalculateDistance = False; #Default value
+		else:
+			self.bCalculateDistance = bCalculateDistance;
+
+	def flat_map(self, value, collector):
+		target1     	= value[0][0]; 
+		sum1 	     	= value[0][1][0];
+		sum_square1   	= value[0][1][1];
+		dictOfContexts1 = value[0][2];
+		target2      	= value[1][0];
+		sum2 	     	= value[1][1][0];
+		sum_square2  	= value[1][1][1];
+		dictOfContexts2	= value[1][2];
+		""" Inicializações """
+		result       = Similarity();
+		sumsum       = 0.0
+		contextDict1 = dictOfContexts1.dict;
+		contextDict2 = dictOfContexts2.dict;
+
+		#Percorre lista de contexto da 1a
+		for k1, v1 in contextDict1.items():
+			if k1 in contextDict2:  # The context is shared by both target
+				v2 = contextDict2[k1];
+				sumsum += v1 + v2;
+				result.cosine += v1 * v2
+				if (self.bCalculateDistance):
+					absdiff = fabs(v1 - v2);
+					result.l1 	  += absdiff;
+					result.l2 	  += absdiff * absdiff; 
+					result.askew1 += relativeEntropySmooth( v1, v2 );
+					result.askew2 += relativeEntropySmooth( v2, v1 );
+					avg = (v1+v2)/2.0;
+					result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
+			else:
+				if (self.bCalculateDistance):
+					result.askew1 += relativeEntropySmooth( v1, 0 );
+					result.jsd    += relativeEntropySmooth( v1, v1/2.0);
+					result.l1     += v1;
+					result.l2     += v1 * v1;
+
+		#Distance measures use the union of contexts and require this part
+		if self.bCalculateDistance :
+			for k2, v2 in contextDict2.items():
+				if not (k2 in contextDict1):  # The context is not shared by both target
+					result.askew2 += relativeEntropySmooth( v2, 0 );
+					result.jsd    += relativeEntropySmooth( v2, v2/2.0 );
+					result.l1     += v2;      
+					result.l2     += v2 * v2;   
+
+			result.l2 = sqrt( result.l2 );
+
+		dividendo = sqrt(sum_square1) * sqrt(sum_square2);
+		if dividendo != 0:
+			result.cosine = result.cosine / dividendo
+
+		dividendo = sum1 + sum2
+		if dividendo != 0:
+			result.lin = sumsum / dividendo;
+
+		# Different version of jaccard: you are supposed to use it with 
+		# assoc_measures f_c or entropy_context. In this case, the sumsum value is 
+		# 2 * context_weights, and dividing by 2 is the same as averaging between 2 
+		# equal values. However, when used with different assoc_scores, this can give
+		# interesting results. To be tested. Should give similar results to Lin */
+		dividendo = sum1 + sum2 - (sumsum/2.0);
+		if dividendo != 0:
+			result.wjaccard = (sumsum/2.0) / dividendo;
+
+		result.randomic = random.random();
+
+		result.target1 = target1;
+		result.target2 = target2;
+
+		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
+		collector.collect(result);
+
+
 """ ReduceFunction """
 # """
 # Name: AddIntegers
@@ -163,8 +277,20 @@ class EntropyCalculator(FlatMapFunction):
 # Author: 23/07/2016 Matheus Mignoni
 # """
 class AddIntegers(ReduceFunction):
+	def reduce(self, value1, value2):
+		return int(value1) + int(value2);
+
+
+# """
+# Name: AddValues
+# 
+# Classe utilizada para especificar uma ReduceFunction
+# Junta a lista de contextos de um target
+# 
+# Author: 23/07/2016 Matheus Mignoni
+class AddValues(ReduceFunction):
     def reduce(self, value1, value2):
-    	return int(value1) + int(value2);
+    	return "1";
 
 """ GroupReduceFunction """
 # """
@@ -273,11 +399,14 @@ class ContextLinksAndCounts(GroupReduceFunction):
 # Author: 23/07/2016 Matheus Mignoni
 class TargetContextsGrouper(GroupReduceFunction):
 	def reduce(self, iterator, collector):
+		target       = '';
 		sum 	     = 0;
 		sum_square   = 0;
 		dictContexts = dict();
+		tupleContexts = ();
 
 		for key,value in iterator:
+			target = key;
 			sum += value[0]
 			sum_square += value[1]
 			if value[2][0] in dictContexts.keys():
@@ -285,8 +414,14 @@ class TargetContextsGrouper(GroupReduceFunction):
 			else:
 				dictContexts[value[2][0]] = value[2][1]
 
-		collector.collect( (key,(sum, sum_square, (dictContexts.items()))) ); #collector nao suporta Dict, mandamos apenas os itens
+		#for key2, value2 in dictContexts.items():
+			#collector.collect( (target, ((sum, sum_square), (key, value))) );
+			#collector.collect( ((target, int(sum), int(sum_square)), (key2, int(value2))) );
+			#collector.collect( (target, (int(sum), int(sum_square)), (key2, value2)) );
 
+		collector.collect( (target, (int(sum), int(sum_square)), DictOfContexts(dictContexts)) );
+
+		
 """ FilterFunction """
 # """
 # Name: FilterFromList
