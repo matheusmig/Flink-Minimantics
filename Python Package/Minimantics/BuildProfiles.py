@@ -32,7 +32,6 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	if bSaveOutput: # Entrada da função será lida de arquivo => ((target, context), valor) 
 		rawData = env.read_text("/Volumes/MATHEUS/TCC/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
-		#rawData = env.read_text("/home/mmignoni/Flink-Minimantics/Input/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
 
 	else: # Entrada é recebida por parametro  
 		rawData = filterRawOutput.map(lambda tuple: (tuple[0][0], tuple[0][1], tuple[1])); #converte de ((target, context), valor) para: (target, context, valor)
@@ -75,8 +74,12 @@ def buildProfiles(env, filterRawOutput, args):
 	" Output data "
 	"""		
 	if bSaveOutput:
-		outputHeaderRDD = env.from_elements(Profile.returnHeader());
-		outputRdd = outputHeaderRDD.union(OutputData)
-		outputRdd.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
+		#OutputHeader = env.from_elements(Profile.returnHeader());
+		#OutputHeader.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
+		OutputData.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
+		return OutputData;
+	else:
+		return OutputData;
 
-	return outputRdd;
+
+

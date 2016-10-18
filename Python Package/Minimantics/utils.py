@@ -441,6 +441,37 @@ class FilterFromList(FilterFunction):
 		else:
 			return False
 
+# """
+# Name: OutputSim
+# 
+# Filtra Similarities Results. Implementa o comportamento da função "output_sim" do código original em C
+# 
+# Author: 16/10/2016 Matheus Mignoni
+# """
+class OutputSim(FilterFunction):
+	def __init__(self, lst_tfilter, lst_nfilter, simThresh, distThresh):
+		self.lst_tfilter = lst_tfilter;
+		self.lst_nfilter = lst_nfilter;
+
+		self.simThresh  = simThresh;
+		self.distThresh = distThresh;
+
+	def filter(self, value):
+		#Value is a Similariy object
+		if value.target1 == value.target2:
+			return False;
+		elif value.target1 in self.lst_tfilter:
+			return False
+		elif value.target2 in self.lst_nfilter:
+			return False
+		else:
+			#Filter simThreshold and distThreshold
+			if ((self.simThresh  != -99999) and ((value.cosine < self.simThresh) or (value.wjaccard < self.simThresh) or (value.lin < self.simThresh))) or\
+			   ((self.distThresh != -99999) and ((value.lin < self.distThresh) or (value.l1 < self.distThresh) or (value.l2 < self.distThresh) or (value.jsd < self.distThresh))):
+				return False; #OBS: Não estamos levando em consideração a medida askew1 e askew2
+			else:
+				return True;
+
 
 """ CoGroupFunction """
 # """

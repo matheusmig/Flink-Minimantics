@@ -198,18 +198,18 @@ class ProfileDeserializer(object):
 		return Profile(target, context, targetContextCount, targetCount, contextCount, entropy_target, context_target, nPairs);
 
 class Similarity(object):
-	def __init__(self):
-		self.target1  = "";
-		self.target2  = "";
-		self.cosine   = 0.0;
-		self.wjaccard = 0.0;
-		self.lin      = 0.0;
-		self.l1       = 0.0;
-		self.l2       = 0.0;
-		self.jsd      = 0.0;
-		self.random   = 0.0;
-		self.askew1   = 0.0;
-		self.askew2   = 0.0;
+	def __init__(self, target1="", target2="", cosine=0.0, wjaccard=0.0, lin=0.0, l1=0.0, l2=0.0, jsd=0.0, random=0.0, askew1=0.0, askew2=0.0):
+		self.target1  = target1; 	#Target
+		self.target2  = target2; 	#Neighbor
+		self.cosine   = cosine; 	#Tipo de score: SIM
+		self.wjaccard = wjaccard; 	#Tipo de score: SIM
+		self.lin      = lin; 		#Tipo de score: SIM
+		self.l1       = l1 			#Tipo de score: DIST
+		self.l2       = l2; 		#Tipo de score: DIST
+		self.jsd      = jsd;		#Tipo de score: DIST
+		self.random   = random; 	#Tipo de score: RAND
+		self.askew1   = askew1; 	#Tipo de score: DIST
+		self.askew2   = askew2; 	#Tipo de score: DIST
 
 	#Funçoes de I/O	
 	def returnResultAsStr(self):
@@ -248,11 +248,10 @@ class SimilarityDeserializer(object):
 		#Context
 		target2_size = struct.unpack(">i", read(4))[0]
 
-		target2 = read[nStart:nStart+target2_size].decode("utf-8");
+		target2 = read(target2_size).decode("utf-8");
 
 		#cosine
-		cosine = struct.unpack(">q", read(8))[0]
-   		
+		cosine = struct.unpack(">q", read(8))[0]   		
 		#wjaccard
 		wjaccard = struct.unpack(">q", read(8))[0]
 		#lin

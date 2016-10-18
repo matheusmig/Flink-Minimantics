@@ -97,8 +97,6 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	""" 
 	" Dados 
 	"""
-#   Header foi removido, não é mais necessário separar entre Header e Data
-#	data = profiles.filter(lambda x: x != header[0]); 
 
 	""" 
 	Filtra dados: 
@@ -149,117 +147,23 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	# sum2 		   = i[1][1][0];
 	# sum_square2  = i[1][1][1];
 	# contextDict2 = i[1][1][2];
-	listCalculatedSimilarities = targetsCartesian.flat_map(Similaritier(True))\
-    											 .map(lambda similarity : similarity.returnResultAsStr());
+	CalculatedSimilarities = targetsCartesian.flat_map(Similaritier(True));
+														                  
 
-	listCalculatedSimilarities.write_text(strOutputFile+".SimlistCalculatedSimilarities.txt", WriteMode.OVERWRITE );
-    
-#			
-#
-#	""" Processa formato de saída """					      
-#	listOutputFinal = []; #Lista com o resultado final
-#	listOutputFinal = listCalculatedSimilarities.map( lambda sim: sim.returnResultAsStr()).collect();
+	""" Processa formato de saída """
 
-
-# Antiga forma de percorrer a lista de targets cartesian, com python puro:
-#	for i in targetsCartesian:
-#		target1      = i[0][0][1]; 
-#		sum1 		 = i[0][1][0];
-#		sum_square1  = i[0][1][1];
-#		contextDict1 = i[0][1][2];
-#		target2      = i[1][0][1];
-#		sum2 		 = i[1][1][0];
-#		sum_square2  = i[1][1][1];
-#		contextDict2 = i[1][1][2];
-#		if (target1 not in lstTargetsWordsFiltered) and (target2 not in lstTargetsWordsFiltered):
-#			result = calc_sim(contextDict1, contextDict2, sum1, sum_square1, sum2, sum_square2);
-#			result.target1 = target1;
-#			result.target2 = target2;
-#			#OBS: Aqui não estamos processando a etapa de process_sim_scores, no qual calcula apenas os scores que foram selecionados na opçoes de argumento 's'
-#			listOutputFinal.append(result.returnResultAsStr())
+	OutputData = CalculatedSimilarities.filter(OutputSim(lstTargetsWordsFiltered, lstNeighborWordsFiltered, nSimThreshold, nDistThreshold))\
+									   .map(lambda similarity : similarity.returnResultAsStr());
 
 
 
-#	"""
-#	" Output data "
-#	"""	
-#	outputHeaderRDD = sc.parallelize( [SimilarityResult.returnHeader()] ) ;
-#	outputDataRdd   = sc.parallelize(listOutputFinal)
-#
-#	outputRdd = outputHeaderRDD.union(outputDataRdd)	
-#
-#	if bSaveOutput:
-#		saveToSSV(outputRdd, "mini.1.sim-th0.2")
-#
-#	return outputRdd
-
-
-
-	
-# """
-# Name: calc_sim
-# 
-# Calcula a similaridade de duas listas de contextos,
-# retorna no formato de um objeto SimilarityResult 
-# 
-# Author: 23/07/2016 Matheus Mignoni
-# """
-#def calc_sim(target, neighbor, contextList1, contextList2, sum1, sum_square1, sum2, sum_square2):
-#	""" Inicializações """
-#	result = SimilarityResult();
-#	sumsum = 0.0
-#	
-#	for key1, value1 in contextList1.items():
-#		v1 = contextList1[key1];
-#		if key1 in contextList2:  # The context is shared by both target
-#			v2 = contextList2[key1];
-#			sumsum += v1 + v2;
-#			result.cosine += v1 * v2
-#			if (bCalculateDistance):
-#				absdiff = fabs(v1 - v2);
-#				result.l1 	  += absdiff;
-#				result.l2 	  += absdiff * absdiff; 
-#				result.askew1 += relativeEntropySmooth( v1, v2 );
-#				result.askew2 += relativeEntropySmooth( v2, v1 );
-#				avg = (v1+v2)/2.0;
-#				result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
-#		else:
-#			if (bCalculateDistance):
-#				result.askew1 += relativeEntropySmooth( v1, 0 );
-#				result.jsd    += relativeEntropySmooth( v1, v1/2.0);
-#				result.l1     += v1;
-#				result.l2     += v1 * v1;
-#
-#
-#	""" Distance measures use the union of contexts and require this part """
-#	if bCalculateDistance :
-#		for key2, value2 in contextList2.items():
-#			v2 = contextList2[key2];
-#			if not (key2 in contextList1):  # The context is not shared by both target
-#				result.askew2 += relativeEntropySmooth( v2, 0 );
-#				result.jsd    += relativeEntropySmooth( v2, v2/2.0 );
-#				result.l1     += v2;      
-#				result.l2     += v2 * v2;   
-#
-#		result.l2 = sqrt( result.l2 );   
-#
-#
-#	result.cosine = result.cosine / (sqrt(sum_square1) * sqrt(sum_square2));
-#	result.lin = sumsum / (sum1 + sum2);
-#	# Different version of jaccard: you are supposed to use it with 
-#	# assoc_measures f_c or entropy_context. In this case, the sumsum value is 
-#	# 2 * context_weights, and dividing by 2 is the same as averaging between 2 
-#	# equal values. However, when used with different assoc_scores, this can give
-#	# interesting results. To be tested. Should give similar results to Lin */
-#	result.wjaccard = (sumsum/2.0) / ( sum1 + sum2 - (sumsum/2.0) );
-#	result.randomic = random();
-#
-#	result.target1 = target;
-#	result.target2 = neighbor;
-#	return result;
-#
-
-
+	if bSaveOutput:
+		#OutputHeader = env.from_elements(Similarity.returnHeader());
+		#OutputHeader.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );
+		OutputData.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );
+		return OutputData;
+	else:
+		return OutputData;
 
 
 

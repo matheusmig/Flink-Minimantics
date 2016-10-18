@@ -43,9 +43,9 @@ def inputArgs():
 	parser.add_argument('-c',                      default=[],   	dest='ContextWordsFiltered')    #used in CalculateSimilarity
 	parser.add_argument('-FW',           type=int, default=0,    	dest='FilterWordThresh') 		#used in FilterRaw
 	parser.add_argument('-FP',           type=int, default=0,    	dest='FilterPairThresh') 		#used in FilterRaw
-	parser.add_argument('-A',            type=int, default=0,    	dest='AssocThresh')             #used in CalculateSimilarity
-	parser.add_argument('-S',            type=int, default=0,    	dest='SimThresh')  				#used in CalculateSimilarity
-	parser.add_argument('-D',            type=int, default=0,    	dest='DistThresh')              #used in CalculateSimilarity
+	parser.add_argument('-A',            type=float, default=-99999, 	dest='AssocThresh')             #used in CalculateSimilarity
+	parser.add_argument('-S',            type=float, default=-99999, 	dest='SimThresh')  				#used in CalculateSimilarity
+	parser.add_argument('-D',            type=float, default=-99999, 	dest='DistThresh')              #used in CalculateSimilarity
 	args = parser.parse_args()
 	return args
 
