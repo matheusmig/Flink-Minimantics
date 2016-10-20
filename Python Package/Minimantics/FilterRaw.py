@@ -25,7 +25,8 @@ def filterRawInput(env, inputFile, args):
 	"""
 	wordLengthThreshold = vars(args)['FilterWordThresh']
 	pairCountThreshold  = vars(args)['FilterPairThresh']
-	bSaveOutput         = vars(args)['GenerateSteps']
+	bGenSteps     		= vars(args)['GenerateSteps']
+	bSaveOutput   		= vars(args)['GenerateFilterRaw']
 	strOutputFile       = vars(args)['OutFile'];
 
 	"""
@@ -36,9 +37,7 @@ def filterRawInput(env, inputFile, args):
 	
 	"""
 	"Filtering, sorting and uniquing raw triples in inputfile"
-	"""
-#	print('Filtering Input...');
-	
+	"""	
 	""" targets word count, filtering targets that occur more than threshold, with size greater than 1 and sorting by key alphabetcally"""
 	#file.1.targets.filter10 => targetsFiltered
 	targetsFiltered = pairWords.map( lambda tuple : (tuple[0], 1) ) \
@@ -46,7 +45,7 @@ def filterRawInput(env, inputFile, args):
 						.filter(lambda targetTuple: len(targetTuple[0]) > 1 and targetTuple[1] > int(wordLengthThreshold))\
 						.project(0);
 	
-	if bSaveOutput:
+	if bGenSteps:
 		targetsFiltered.write_text(strOutputFile+".targets.filter"+str(wordLengthThreshold)+".txt", WriteMode.OVERWRITE );
 	
 	""" contexts word count, filtering targets that occur more than threshold, with size greater than 1 and sorting by key alphabetcally"""
@@ -56,7 +55,7 @@ def filterRawInput(env, inputFile, args):
 						.filter(lambda contextTuple: len(contextTuple[0]) > 1 and contextTuple[1] > int(wordLengthThreshold))\
 						.project(0);
 
-	if bSaveOutput:
+	if bGenSteps:
 		contextsFiltered.write_text(strOutputFile+".contexts.filter"+str(wordLengthThreshold)+".txt", WriteMode.OVERWRITE );
 
 
@@ -66,7 +65,6 @@ def filterRawInput(env, inputFile, args):
 	
 	""" select only triples containing verbs from the filtered list, sort in object order """
 	""" and filter keeping only triples whose objects are in the filtered list """
-	print('Starting Join...' )
 
 	#file.1.filter.t10.c10 => PairWordsFiltered
 	PairWordsFiltered  =  pairWords.join(targetsFiltered).where(0).equal_to(0).project_first(0,1)\
@@ -75,7 +73,7 @@ def filterRawInput(env, inputFile, args):
 								   #.sort_group(0, Order.DESCENDING )\
 								   #.reduce_group(NothingReduce());
 	
-	if bSaveOutput:		
+	if bGenSteps:		
 		PairWordsFiltered.write_text(strOutputFile+".filter.t"+str(wordLengthThreshold)+".c"+str(wordLengthThreshold)+".txt",  WriteMode.OVERWRITE );
 
 
@@ -90,7 +88,7 @@ def filterRawInput(env, inputFile, args):
 													.reduce_group(NothingReduce());
 										            
 	
-	if bSaveOutput:
+	if bGenSteps or bSaveOutput:
 		PairWordsFilteredUniqueCount.write_text(strOutputFile+".filterRawOutput.txt", WriteMode.OVERWRITE );
 	
 	return PairWordsFilteredUniqueCount

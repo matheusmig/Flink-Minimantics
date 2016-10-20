@@ -17,13 +17,6 @@ from Minimantics.CalculateSimilarity import *
 import sys, argparse
 from datetime import datetime
 
-## Variáveis Globais
-args = []  				 #Argumentos. OBS: para transformar em um dictionary, usar => vars(opts)['key']
-scConf = None 			 #Config do SparkContext
-sc = None 				 #SparkContext
-bGenerateSteps = False   #Flag que indica se deve gerar arquivos durante as etapas intermediárias, senão, apenas salvará o resultado final em arquivo.
-
-
 # """
 # Name: inputOpt
 # 
@@ -33,32 +26,27 @@ bGenerateSteps = False   #Flag que indica se deve gerar arquivos durante as etap
 # """
 def inputArgs():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-i', '--input', 					     	dest='InFile') 					#default action is store the value
-	parser.add_argument('-o', '--output',					     	dest='OutFile')
-	parser.add_argument('-steps', action='store_const', const=True, dest='GenerateSteps')           #Flag que indica se deve gerar arquivos durante as etapas intermediárias
-	parser.add_argument('-a',            default="cond_prob",    	dest='AssocName')   			#used in CalculateSimilarity
-	parser.add_argument('-s',                      default='',   	dest='Scores')			        #used in CalculateSimilarity
-	parser.add_argument('-t',                      default=[],   	dest='TargetsWordsFiltered')    #used in CalculateSimilarity
-	parser.add_argument('-n',                      default=[],   	dest='NeighborWordsFiltered')   #used in CalculateSimilarity
-	parser.add_argument('-c',                      default=[],   	dest='ContextWordsFiltered')    #used in CalculateSimilarity
-	parser.add_argument('-FW',           type=int, default=0,    	dest='FilterWordThresh') 		#used in FilterRaw
-	parser.add_argument('-FP',           type=int, default=0,    	dest='FilterPairThresh') 		#used in FilterRaw
-	parser.add_argument('-A',            type=float, default=-99999, 	dest='AssocThresh')             #used in CalculateSimilarity
-	parser.add_argument('-S',            type=float, default=-99999, 	dest='SimThresh')  				#used in CalculateSimilarity
-	parser.add_argument('-D',            type=float, default=-99999, 	dest='DistThresh')              #used in CalculateSimilarity
-	args = parser.parse_args()
-	return args
+	parser.add_argument('-i', '--input',                                            dest='InFile') 		           #Nome do arquivo de entrada
+	parser.add_argument('-o', '--output',                              default='',  dest='OutFile')		           #Nome do arquivo de saída
+	parser.add_argument('--steps',               action='store_const', const=True,  dest='GenerateSteps')           #Flag que indica se deve gerar TODOS arquivos intermediários de saída durante as etapas do algoritmo
+	parser.add_argument('--save_filterraw',      action='store_const', const=True,  dest='GenerateFilterRaw')       #Flag que indica se deve gerar o arquivo de saída para a fase 1 (FilterRaw)
+	parser.add_argument('--save_buildprofile',   action='store_const', const=True,  dest='GenerateBuildProfile')    #Flag que indica se deve gerar o arquivo de saída para a fase 2 (BuildProfiles)
+	parser.add_argument('--save_calcsimilarity', action='store_const', const=True,  dest='GenerateCalcSimilarity')  #Flag que indica se deve gerar o arquivo de saída para a fase 3 (CalculateSimilarity)
+	parser.add_argument('-a',                                 default="cond_prob",  dest='AssocName')   	           #used in CalculateSimilarity
+	parser.add_argument('-s',                                          default='',  dest='Scores')		           #used in CalculateSimilarity
+	parser.add_argument('-t',                                          default=[],  dest='TargetsWordsFiltered')    #used in CalculateSimilarity. Lista de targets que serão ignorados e removidos durante processamento
+	parser.add_argument('-n',                                          default=[],  dest='NeighborWordsFiltered')   #used in CalculateSimilarity. Lista de neighbors que serão ignorados e removidos durante processamento
+	parser.add_argument('-c',                                          default=[],  dest='ContextWordsFiltered')    #used in CalculateSimilarity. Lista de contexts que serão ignorados e removidos durante processamento
+	parser.add_argument('-A',                          type=float, default=-99999,  dest='AssocThresh')             #used in CalculateSimilarity. Threshold mínimo para a medida de associação entre um target e um context, pares de target,context que tiverem uma força de associação abaixo disso serão filtrado fora.
+	parser.add_argument('-S',                          type=float, default=-99999,  dest='SimThresh')  		       #used in CalculateSimilarity. Threshold mínimo para as medidas de similaridade, targets com medidas abaixo disso serão filtrados fora.
+	parser.add_argument('-D',                          type=float, default=-99999,  dest='DistThresh')              #used in CalculateSimilarity. Threshold máximo para as medidas de distância, targets com medidas a cima disso serão filtrados fora.
+	parser.add_argument('--calculate_distances', action='store_const', const=True,  dest='CalculateDistances')      #used in CalculateSimilarity. Flag que indica se calcularemos todas as medidas de distância, senão mediremos apenas as medidas de similaridade 
+	parser.add_argument('--only_cosines',        action='store_const', const=True,  dest='OnlyCosines')             #Flag que indica se queremos gerar o arquivo de saída contendo como unica medida de similaridade a similiridade por coseno 
+	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
+	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
+	args, unknown = parser.parse_known_args()
+	return args,unknown;
 
-# """
-# Name: verifyFlagSteps
-# 
-# Process argument 
-# 
-# Author: 23/07/2016 Matheus Mignoni
-# """
-def verifyFlagSteps():
-	bGenerateSteps = vars(args)['GenerateSteps'];
-	return bGenerateSteps;
 
 # """
 # Name: process
@@ -67,47 +55,55 @@ def verifyFlagSteps():
 # 
 # Author: 23/07/2016 Matheus Mignoni
 # """
-def process( master ):
-	if ((args != None) and (vars(args)['InFile'] != None)
-	                   and (vars(args)['OutFile'] != None)):
+def process( args ):
+	"""
+	Start Flink Environment
+	"""
+	env = get_environment()
+	
+	if ((args == None) and (vars(args)['InFile'] == None)
+	                   and (vars(args)['OutFile'] == None)):
+		sys.exit('Input File and/or Output File aren\'t defined')
 
-		"""
-		Reading Input File
-		"""
-		print ('Reading input file...' );
-		strInputFile  = vars(args)['InFile'];
-		stroutputFile = vars(args)['OutFile'];
-		data 		 = env.read_text(strInputFile); #Lê do arquivo
-		print ('\n------------------ COMEÇANDO PROCESSAMENTO!!! ------------')
+	"""
+	#Regiser custom types 
+	"""
+	env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
+	env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
+	env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
+	"""
+	Reading Input File
+	"""
+	strInputFile  = vars(args)['InFile'];
+	stroutputFile = vars(args)['OutFile'];
+	data 		  = env.read_text(strInputFile); #Lê do arquivo
+	print ('\n------------------ COMEÇANDO PROCESSAMENTO!!! ------------')
 
+	"""
+	Step1: Filter Raw
+	"""
+	print ('*** STEP 1 : FILTERING RAW ***')
+	filterRawOutput = filterRawInput(env, data, args);
+	"""
+	Step2: Build Profiles
+	"""
+	print ('*** STEP 2 : BUILDING PROFILES ***')
+	buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
 
-		"""
-		Filter Raw
-		"""
-#		print ('*** STEP 1 : FILTERING RAW ***')
-#		filterRawOutput = filterRawInput(env, data, args);
-		"""
-		Build Profiles
-		"""
-		buildProfilesOutput = ""
-#		print ('*** STEP 2 : BUILDING PROFILES ***')
-#		buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
+	"""
+	step3: Calculate Similarity
+	"""
+	print ('*** STEP 3 : CALCULATING SIMILARITY ***')
+	output = calculateSimilarity(env, buildProfilesOutput, args);
 
+	output.write_text(stroutputFile, WriteMode.OVERWRITE );
 
-		"""
-		Calculate Similarity
-		"""
-		print ('*** STEP 3 : CALCULATING SIMILARITY ***')
-		calculateSimilarity(env, buildProfilesOutput, args);
+	print ('------------------ FINAL DO PROCESSAMENTO!!! ------------\n')
 
-
-
-		print ('------------------ FINAL DO PROCESSAMENTO!!! ------------\n')
-
-	else:
-		print ('Input File and/or Output File aren\'t defined')
-
-
+	"""
+	Execute
+	"""
+	env.execute(local=True)
 
 # """
 # Name: Main function
@@ -117,39 +113,22 @@ def process( master ):
 # Author: 23/07/2016 Matheus Mignoni
 # """
 def main( opts ):
-	#Read input options
-	print ("\n------------------ Reading arguments ------------------ ")
-	global args  # modificador global permite acessar variável definida fora da funcao
-	args = inputArgs()  
+	"""
+	Read input arguments
+	"""
+	args, unknown = inputArgs()  
 
-	#flag to save intermediate files in processing
-	if verifyFlagSteps():
-		print ("[ Will generate output files at each step ]")
+	if not unknown:
+		#PROCESS
+		process (args)
 	else:
-		print ("[ Only will generate output file at the end ]")
-
-	#Registra custom types 
-	env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
-	env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
-	env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
-
-	#PROCESS
-	process (None)
+		sys.exit("Unrecognized arguments: "+str(unknown));
 
 if __name__ == "__main__":
-	"""
-	Start Flink Environment
-	"""
-	env = get_environment()
 
 	"""
 	Main Method
 	"""
 	main(sys.argv);
-
-	"""
-	Execute
-	"""
-	env.execute(local=True)
 
 

@@ -18,14 +18,6 @@ from flink.plan.DataSet import *
    affinity, entropy_target, entropy_context 
 """
 
-#Argumentos
-#
-bCalculateDistance = True;
-
-#Context Dictionary - contém o valor associado a um context
-contextDictionary = {}
-
-
 # """
 # Name: calculateSimilarity
 # 
@@ -37,9 +29,11 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	"""
 	" Inicialização de variáveis conforme argumentos de entrada "
 	"""
-	strOutputFile = vars(args)['OutFile'];
-	bSaveOutput 				= vars(args)['GenerateSteps']
-	AssocName   				= vars(args)['AssocName']	
+	strOutputFile               = vars(args)['OutFile'];
+	bGenSteps 				    = vars(args)['GenerateSteps']
+	bSaveOutput 				= vars(args)['GenerateCalcSimilarity']	
+	bCalculateDistance          = vars(args)['CalculateDistances']
+	AssocName   				= vars(args)['AssocName']
 	minScores 					= vars(args)['Scores']				     
 	lstTargetsWordsFiltered		= vars(args)['TargetsWordsFiltered']
 	lstNeighborWordsFiltered	= vars(args)['NeighborWordsFiltered']
@@ -47,12 +41,13 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	nAssocThreshold				= vars(args)['AssocThresh']         
 	nSimThreshold				= vars(args)['SimThresh']  			
 	nDistThreshold				= vars(args)['DistThresh']     
+	bOnlyCosinesOutput          = vars(args)['OnlyCosines'] 
 
 
 	"""
 	" Lê entrada
 	"""
-	if bSaveOutput: # Entrada da função será lida de arquivo
+	if bGenSteps: # Entrada da função será lida de arquivo
 		profiles = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.profiles" ).map(lambda line: (line.split("\t")));
 	else: 		    # Entrada é recebida em memória 
 		profiles = buildProfilesOutput;
@@ -81,18 +76,18 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	targetContextCountIndex	= 4  #lstHeader.index('f_tc')
 	targetCountIndex 		= 5  #lstHeader.index('f_t')
 	contextCountIndex		= 6  #lstHeader.index('f_c')
-	entropy_targetIndex		= 7  #lstHeader.index('entropy_target')
-	entropy_contextIndex 	= 8  #lstHeader.index('entropy_context')
-	condProbIndex	  		= 9  #lstHeader.index('cond_prob')
-	pmiIndex 				= 10  #lstHeader.index('pmi')
-	npmiIndex	      		= 11  #lstHeader.index('npmi')
-	lmiIndex 				= 12 #lstHeader.index('lmi')
-	tscoreIndex	    		= 13 #lstHeader.index('tscore')
-	zscoreIndex	    		= 14 #lstHeader.index('zscore')
-	diceIndex	      		= 15 #lstHeader.index('dice')
-	chisquareIndex	 		= 16 #lstHeader.index('chisquare')
-	loglikeIndex 			= 17 #lstHeader.index('loglike')
-	affinityIndex	  		= 18 #lstHeader.index('affinity')
+	condProbIndex	  		= 7  #lstHeader.index('cond_prob')
+	pmiIndex 				= 8  #lstHeader.index('pmi')
+	npmiIndex	      		= 9  #lstHeader.index('npmi')
+	lmiIndex 				= 10 #lstHeader.index('lmi')
+	tscoreIndex	    		= 11 #lstHeader.index('tscore')
+	zscoreIndex	    		= 12 #lstHeader.index('zscore')
+	diceIndex	      		= 13 #lstHeader.index('dice')
+	chisquareIndex	 		= 14 #lstHeader.index('chisquare')
+	loglikeIndex 			= 15 #lstHeader.index('loglike')
+	affinityIndex	  		= 16 #lstHeader.index('affinity')
+	entropy_targetIndex		= 17 #lstHeader.index('entropy_target')
+	entropy_contextIndex 	= 18 #lstHeader.index('entropy_context')
 
 	""" 
 	" Dados 
@@ -110,7 +105,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	                       .filter( FilterFromList(contextIndex, lstContextWordsFiltered))\
 	                       .filter( FilterFromList(targetIndex , lstNeighborWordsFiltered));
 
-	if bSaveOutput:
+	if bGenSteps:
 		filteredData.write_text(strOutputFile+".SimilarityFilteredData.txt", WriteMode.OVERWRITE );
 
 	""" O código original em C, utilizava uma estrutura chamada targets_context para armazenar os targets, suas somas e sua lista de contexts. 
@@ -126,7 +121,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 							     .group_by(0).reduce_group(TargetContextsGrouper());
     
 
-	if bSaveOutput:
+	if bGenSteps:
 		targetContexts.write_text(strOutputFile+".SimilarityTargetContextes.txt", WriteMode.OVERWRITE );
 
 
@@ -134,7 +129,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	# Faz a combinação cartesiana de todos os targets, junto com sua soma, soma quadrática e lista de contexts
 	targetsCartesian = targetContexts.cross(targetContexts);
 
-	if bSaveOutput:
+	if bGenSteps:
 		targetsCartesian.write_text(strOutputFile+".SimilarityTargetsCartesian.txt", WriteMode.OVERWRITE );
 
 	# TODO: é possível aumentar a eficiência dessa operação?
@@ -147,17 +142,17 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	# sum2 		   = i[1][1][0];
 	# sum_square2  = i[1][1][1];
 	# contextDict2 = i[1][1][2];
-	CalculatedSimilarities = targetsCartesian.flat_map(Similaritier(True));
+	CalculatedSimilarities = targetsCartesian.flat_map(Similaritier(bCalculateDistance));
 														                  
-
+	if bGenSteps:
+		a = CalculatedSimilarities.map(lambda similarity : similarity.returnResultAsStr());
+		a.write_text(strOutputFile+".CalculatedSimilarities.txt", WriteMode.OVERWRITE );
+	
 	""" Processa formato de saída """
-
 	OutputData = CalculatedSimilarities.filter(OutputSim(lstTargetsWordsFiltered, lstNeighborWordsFiltered, nSimThreshold, nDistThreshold))\
-									   .map(lambda similarity : similarity.returnResultAsStr());
+								        .map(lambda similarity : similarity.returnResultAsStr( bOnlyCosinesOutput ));
 
-
-
-	if bSaveOutput:
+	if bGenSteps or bSaveOutput:
 		#OutputHeader = env.from_elements(Similarity.returnHeader());
 		#OutputHeader.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );
 		OutputData.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );

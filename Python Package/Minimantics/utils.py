@@ -197,16 +197,18 @@ class Similaritier(FlatMapFunction):
 		target1     	= value[0][0]; 
 		sum1 	     	= value[0][1][0];
 		sum_square1   	= value[0][1][1];
-		dictOfContexts1 = value[0][2];
+		dictOfContexts1 = json.loads(value[0][2]);
 		target2      	= value[1][0];
 		sum2 	     	= value[1][1][0];
 		sum_square2  	= value[1][1][1];
-		dictOfContexts2	= value[1][2];
+		dictOfContexts2	= json.loads(value[1][2]);
 		""" Inicializações """
 		result       = Similarity();
 		sumsum       = 0.0
-		contextDict1 = dictOfContexts1.dict;
-		contextDict2 = dictOfContexts2.dict;
+		#contextDict1 = dictOfContexts1.dict;
+		contextDict1 = dictOfContexts1;
+		#contextDict2 = dictOfContexts2.dict;
+		contextDict2 = dictOfContexts2;
 
 		#Percorre lista de contexto da 1a
 		for k1, v1 in contextDict1.items():
@@ -217,10 +219,10 @@ class Similaritier(FlatMapFunction):
 				if (self.bCalculateDistance):
 					absdiff = fabs(v1 - v2);
 					result.l1 	  += absdiff;
-					result.l2 	  += absdiff * absdiff; 
+					result.l2 	  += (absdiff * absdiff); 
 					result.askew1 += relativeEntropySmooth( v1, v2 );
 					result.askew2 += relativeEntropySmooth( v2, v1 );
-					avg = (v1+v2)/2.0;
+					avg            = (v1+v2)/2.0;
 					result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
 			else:
 				if (self.bCalculateDistance):
@@ -400,26 +402,26 @@ class ContextLinksAndCounts(GroupReduceFunction):
 class TargetContextsGrouper(GroupReduceFunction):
 	def reduce(self, iterator, collector):
 		target       = '';
-		sum 	     = 0;
+		sum_ 	     = 0;
 		sum_square   = 0;
 		dictContexts = dict();
-		tupleContexts = ();
 
 		for key,value in iterator:
-			target = key;
-			sum += value[0]
+			target     = key;
+			sum_       += value[0]
 			sum_square += value[1]
 			if value[2][0] in dictContexts.keys():
-				dictContexts[value[2][0]] = dictContexts[value[2][0]] + value[2][1]
+				dictContexts[value[2][0]] = dictContexts[value[2][0]] + value[2][1];
 			else:
-				dictContexts[value[2][0]] = value[2][1]
+				dictContexts[value[2][0]] = value[2][1];
 
 		#for key2, value2 in dictContexts.items():
 			#collector.collect( (target, ((sum, sum_square), (key, value))) );
 			#collector.collect( ((target, int(sum), int(sum_square)), (key2, int(value2))) );
 			#collector.collect( (target, (int(sum), int(sum_square)), (key2, value2)) );
 
-		collector.collect( (target, (int(sum), int(sum_square)), DictOfContexts(dictContexts)) );
+		a = DictOfContexts(dictContexts)
+		collector.collect( (target, (sum_, sum_square), a.returnResultAsStr())  );
 
 		
 """ FilterFunction """
@@ -467,7 +469,7 @@ class OutputSim(FilterFunction):
 		else:
 			#Filter simThreshold and distThreshold
 			if ((self.simThresh  != -99999) and ((value.cosine < self.simThresh) or (value.wjaccard < self.simThresh) or (value.lin < self.simThresh))) or\
-			   ((self.distThresh != -99999) and ((value.lin < self.distThresh) or (value.l1 < self.distThresh) or (value.l2 < self.distThresh) or (value.jsd < self.distThresh))):
+			   ((self.distThresh != -99999) and ((value.lin > self.distThresh) or (value.l1 > self.distThresh) or (value.l2 > self.distThresh) or (value.jsd > self.distThresh))):
 				return False; #OBS: Não estamos levando em consideração a medida askew1 e askew2
 			else:
 				return True;

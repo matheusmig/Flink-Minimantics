@@ -199,22 +199,33 @@ class ProfileDeserializer(object):
 
 class Similarity(object):
 	def __init__(self, target1="", target2="", cosine=0.0, wjaccard=0.0, lin=0.0, l1=0.0, l2=0.0, jsd=0.0, random=0.0, askew1=0.0, askew2=0.0):
-		self.target1  = target1; 	#Target
-		self.target2  = target2; 	#Neighbor
-		self.cosine   = cosine; 	#Tipo de score: SIM
-		self.wjaccard = wjaccard; 	#Tipo de score: SIM
-		self.lin      = lin; 		#Tipo de score: SIM
-		self.l1       = l1 			#Tipo de score: DIST
-		self.l2       = l2; 		#Tipo de score: DIST
-		self.jsd      = jsd;		#Tipo de score: DIST
-		self.random   = random; 	#Tipo de score: RAND
-		self.askew1   = askew1; 	#Tipo de score: DIST
-		self.askew2   = askew2; 	#Tipo de score: DIST
+		self.target1   = target1; 	#Target
+		self.target2   = target2; 	#Neighbor
+		self.cosine    = cosine; 	#Tipo de score: SIM
+		self.wjaccard  = wjaccard; 	#Tipo de score: SIM
+		self.lin       = lin; 		#Tipo de score: SIM
+		self.l1        = l1 		#Tipo de score: DIST
+		self.l2        = l2; 		#Tipo de score: DIST
+		self.jsd       = jsd;		#Tipo de score: DIST
+		self.randomic  = random; 	#Tipo de score: RAND
+		self.askew1    = askew1; 	#Tipo de score: DIST
+		self.askew2    = askew2; 	#Tipo de score: DIST
 
 	#Funçoes de I/O	
-	def returnResultAsStr(self):
-		return self.target1+"\t"+self.target2+"\t"+str(self.cosine)+"\t"+str(self.wjaccard)+"\t"+str(self.lin)+"\t"+\
-		       str(self.l1)+"\t"+str(self.l2)+"\t"+str(self.jsd)+"\t"+str(self.random)+"\t"+str(self.askew1);     
+	def returnResultAsStr(self, bOnlyCosine=None):
+		#Retorna todas as medidas de similaridade
+		if (bOnlyCosine is None) or (bOnlyCosine is False):
+			return self.target1+"\t"+self.target2+"\t"+str(self.cosine)+"\t"+str(self.wjaccard)+"\t"+str(self.lin)+"\t"+\
+		       str(self.l1)+"\t"+str(self.l2)+"\t"+str(self.jsd)+"\t"+str(self.randomic)+"\t"+str(self.askew1);
+		#Retorna apenas a medida de cosseno
+		else:
+			return self.target1+"\t"+self.target2+"\t"+str(self.cosine);
+		  
+
+	#Funçoes de I/O	
+	def returnCosineResultAsStr(self):
+		return self.target1+"\t"+self.target2+"\t"+str(self.cosine);     
+   
 
 	@staticmethod
 	def returnHeader():
@@ -235,11 +246,11 @@ class SimilaritySerializer(object):
 		target2_fmt  = "{}s".format(target2_size)
 
 		#Final Format
-		bufferFormat = ">i"+target1_fmt+"i"+target2_fmt+"9q"; #target_size, target, target2_size, target2, cosine, wjaccard, lin, l1, l2 jsd, random, askew1, askew2
-		return struct.pack(bufferFormat, target1_size, target1Encoded, target2_size, target2Encoded, float(value.cosine), float(value.wjaccard), float(value.lin), float(value.l1), float(value.l2), float(value.jsd), float(value.random), float(value.askew1), float(value.askew2))
+		bufferFormat = ">i"+target1_fmt+"i"+target2_fmt+"9f"; #target_size, target, target2_size, target2, cosine, wjaccard, lin, l1, l2 jsd, random, askew1, askew2
+		return struct.pack(bufferFormat, int(target1_size), target1Encoded, int(target2_size), target2Encoded, float(value.cosine), float(value.wjaccard), float(value.lin), float(value.l1), float(value.l2), float(value.jsd), float(value.randomic), float(value.askew1), float(value.askew2))
 
 class SimilarityDeserializer(object):
-	def _deserialize(self, read):
+	def deserialize(self, read):
 		#Target
 		target1_size = struct.unpack(">i", read(4))[0] #unpack retorna sempre uma tupla
 
@@ -251,23 +262,23 @@ class SimilarityDeserializer(object):
 		target2 = read(target2_size).decode("utf-8");
 
 		#cosine
-		cosine = struct.unpack(">q", read(8))[0]   		
+		cosine = struct.unpack(">f", read(4))[0]   		
 		#wjaccard
-		wjaccard = struct.unpack(">q", read(8))[0]
+		wjaccard = struct.unpack(">f", read(4))[0]
 		#lin
-		lin = struct.unpack(">q", read(8))[0]
+		lin = struct.unpack(">f", read(4))[0]
 		#l1
-		l1 = struct.unpack(">q", read(8))[0]
+		l1 = struct.unpack(">f", read(4))[0]
 		#l2
-		l2 = struct.unpack(">q", read(8))[0]
+		l2 = struct.unpack(">f", read(4))[0]
 		#jsd
-		jsd = struct.unpack(">q", read(8))[0]
+		jsd = struct.unpack(">f", read(4))[0]
 		#random
-		random = struct.unpack(">q", read(8))[0]
+		random = struct.unpack(">f", read(4))[0]
 		#askew1
-		askew1 = struct.unpack(">q", read(8))[0]
+		askew1 = struct.unpack(">f", read(4))[0]
 		#askew2
-		askew2 = struct.unpack(">q", read(8))[0]
+		askew2 = struct.unpack(">f", read(4))[0]
 
 		return Similarity(target1, target2, cosine, wjaccard, lin, l1, l2, jsd, random, askew1, askew2);
 

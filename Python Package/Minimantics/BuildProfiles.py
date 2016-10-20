@@ -24,14 +24,15 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	" Inicialização de variáveis a partir do argumento de entrada "
 	"""
-	bSaveOutput   = vars(args)['GenerateSteps']
+	bGenSteps     = vars(args)['GenerateSteps']
+	bSaveOutput   = vars(args)['GenerateBuildProfile']
 	strOutputFile = vars(args)['OutFile'];
 	
 	"""
 	" Processa entrada para ficar no formato: (target, context, valor) 
 	"""
-	if bSaveOutput: # Entrada da função será lida de arquivo => ((target, context), valor) 
-		rawData = env.read_text("/Volumes/MATHEUS/TCC/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
+	if bGenSteps: # Entrada da função será lida de arquivo => ((target, context), valor) 
+		rawData = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
 
 	else: # Entrada é recebida por parametro  
 		rawData = filterRawOutput.map(lambda tuple: (tuple[0][0], tuple[0][1], tuple[1])); #converte de ((target, context), valor) para: (target, context, valor)
@@ -53,14 +54,14 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	TargetsEntropy  = targetWithLinksAndCounts.flat_map(EntropyCalculator());  #Gera: (target, count, entropy))
 	ContextsEntropy = contextWithLinksAndCounts.flat_map(EntropyCalculator()); #Gera: (context, count, entropy))
-	if bSaveOutput:
+	if bGenSteps:
 		TargetsEntropy.write_text(strOutputFile+".TargetsEntropy.txt", WriteMode.OVERWRITE );
 		ContextsEntropy.write_text(strOutputFile+".ContextsEntropy.txt", WriteMode.OVERWRITE );
 	
 	#Junta os dados
 	JoinedTargetsEntropy = rawData.join(TargetsEntropy).where(0).equal_to(0).using(JoinTargetsCountAndEntropy());
 	JoinedTargetsAndContextsEntropy = JoinedTargetsEntropy.join(ContextsEntropy).where(1).equal_to(0).using(JoinContextsCountAndEntropy()); #OBS: Esta é a parte com o maior volume de dados desta etapa
-	if bSaveOutput:
+	if bGenSteps:
 		JoinedTargetsAndContextsEntropy.write_text(strOutputFile+".JoinedTargetsAndContextsEntropy.txt", WriteMode.OVERWRITE );
 	
 	""" 
@@ -73,7 +74,7 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	" Output data "
 	"""		
-	if bSaveOutput:
+	if bGenSteps or bSaveOutput:
 		#OutputHeader = env.from_elements(Profile.returnHeader());
 		#OutputHeader.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
 		OutputData.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
