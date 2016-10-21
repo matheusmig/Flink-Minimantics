@@ -1,0 +1,30 @@
+---------------------------------------------------------------------------------------------------------
+Rodando:
+./<Flink folder>/bin/pyflink3.sh /<Flink Minimantics>/__init__.py -  [(params),...]
+
+onde: 
+<Flink Folder>      = Local de instalação do Framework Flink
+<Flink Minimantics> = Local onde está a pasta do projeto Flink-Minimantics
+[(params),...]      = Lista opcional de parâmetros
+
+ex:
+./Flink/flink-1.1.1/bin/pyflink3.sh /Desktop/Flink-Minimantics/__init__.py -  -i "/Desktop/Flink-Minimantics/input/mini.1" -o "/Users/mmignoni/Desktop/TCC/outfile.txt" -FW 10 -FP 2 -S 0.2 -calculate_distances
+
+
+---------------------------------------------------------------------------------------------------------
+
+Dicas: 
+
+Gerando entradas a partir de Corpus:
+
+1 - Baixe um corpus
+2 - Utilize o script ExtractInput.py
+
+Instalando um package python:
+
+1 - Navegue até a pasta "Flink-Minimantics/Python Package/"
+2 - Utilize PyPI para instalar:
+	pip install .
+3 - Para atualizar o pacote, utilize:
+	pip install . --upgrade
+

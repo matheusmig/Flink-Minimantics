@@ -114,23 +114,6 @@ class Profiler(MapFunction):
 
 """ FlatMapFunctions """
 # """
-# Name: teste
-# 
-# Classe utilizada para especificar uma FlatMapFunction
-# apenas para testes// apagar
-# Author: 23/07/2016 Matheus Mignoni
-# """
-class testeflatmap(FlatMapFunction):
-	def __init__(self, env):
-		self.env   = env;
-
-	def flat_map(self, value, collector):
-		a = self.env.from_elements('123', '123', '222')
-		a.map(lambda x: "333")
-		a.write_text("/Volumes/MATHEUS/TCC/a.txt", WriteMode.OVERWRITE );
-
-		collector.collect(True);
-# """
 # Name: ExistElement
 # 
 # Classe utilizada para especificar uma FlatMapFunction

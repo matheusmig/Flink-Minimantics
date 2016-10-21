@@ -18,7 +18,7 @@ import sys, argparse
 from datetime import datetime
 
 # """
-# Name: inputOpt
+# Name: inputArgs
 # 
 # Process the input arguments and return it in a list
 # 
@@ -26,19 +26,19 @@ from datetime import datetime
 # """
 def inputArgs():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-i', '--input',                                            dest='InFile') 		           #Nome do arquivo de entrada
-	parser.add_argument('-o', '--output',                              default='',  dest='OutFile')		           #Nome do arquivo de saída
+	parser.add_argument('-i', '--input',                                            dest='InFile') 		            #Nome do arquivo de entrada
+	parser.add_argument('-o', '--output',                              default='',  dest='OutFile')		            #Nome do arquivo de saída
 	parser.add_argument('--steps',               action='store_const', const=True,  dest='GenerateSteps')           #Flag que indica se deve gerar TODOS arquivos intermediários de saída durante as etapas do algoritmo
 	parser.add_argument('--save_filterraw',      action='store_const', const=True,  dest='GenerateFilterRaw')       #Flag que indica se deve gerar o arquivo de saída para a fase 1 (FilterRaw)
 	parser.add_argument('--save_buildprofile',   action='store_const', const=True,  dest='GenerateBuildProfile')    #Flag que indica se deve gerar o arquivo de saída para a fase 2 (BuildProfiles)
 	parser.add_argument('--save_calcsimilarity', action='store_const', const=True,  dest='GenerateCalcSimilarity')  #Flag que indica se deve gerar o arquivo de saída para a fase 3 (CalculateSimilarity)
-	parser.add_argument('-a',                                 default="cond_prob",  dest='AssocName')   	           #used in CalculateSimilarity
-	parser.add_argument('-s',                                          default='',  dest='Scores')		           #used in CalculateSimilarity
+	parser.add_argument('-a',                                 default="cond_prob",  dest='AssocName')   	        #used in CalculateSimilarity
+	parser.add_argument('-s',                                          default='',  dest='Scores')		            #used in CalculateSimilarity
 	parser.add_argument('-t',                                          default=[],  dest='TargetsWordsFiltered')    #used in CalculateSimilarity. Lista de targets que serão ignorados e removidos durante processamento
 	parser.add_argument('-n',                                          default=[],  dest='NeighborWordsFiltered')   #used in CalculateSimilarity. Lista de neighbors que serão ignorados e removidos durante processamento
 	parser.add_argument('-c',                                          default=[],  dest='ContextWordsFiltered')    #used in CalculateSimilarity. Lista de contexts que serão ignorados e removidos durante processamento
 	parser.add_argument('-A',                          type=float, default=-99999,  dest='AssocThresh')             #used in CalculateSimilarity. Threshold mínimo para a medida de associação entre um target e um context, pares de target,context que tiverem uma força de associação abaixo disso serão filtrado fora.
-	parser.add_argument('-S',                          type=float, default=-99999,  dest='SimThresh')  		       #used in CalculateSimilarity. Threshold mínimo para as medidas de similaridade, targets com medidas abaixo disso serão filtrados fora.
+	parser.add_argument('-S',                          type=float, default=-99999,  dest='SimThresh')  		        #used in CalculateSimilarity. Threshold mínimo para as medidas de similaridade, targets com medidas abaixo disso serão filtrados fora.
 	parser.add_argument('-D',                          type=float, default=-99999,  dest='DistThresh')              #used in CalculateSimilarity. Threshold máximo para as medidas de distância, targets com medidas a cima disso serão filtrados fora.
 	parser.add_argument('--calculate_distances', action='store_const', const=True,  dest='CalculateDistances')      #used in CalculateSimilarity. Flag que indica se calcularemos todas as medidas de distância, senão mediremos apenas as medidas de similaridade 
 	parser.add_argument('--only_cosines',        action='store_const', const=True,  dest='OnlyCosines')             #Flag que indica se queremos gerar o arquivo de saída contendo como unica medida de similaridade a similiridade por coseno 
@@ -66,39 +66,39 @@ def process( args ):
 		sys.exit('Input File and/or Output File aren\'t defined')
 
 	"""
-	#Regiser custom types 
+	Custom types 
 	"""
 	env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
 	env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
 	env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
+	
 	"""
-	Reading Input File
+	Input File
 	"""
 	strInputFile  = vars(args)['InFile'];
-	stroutputFile = vars(args)['OutFile'];
+	strOutputFile = vars(args)['OutFile'];
 	data 		  = env.read_text(strInputFile); #Lê do arquivo
-	print ('\n------------------ COMEÇANDO PROCESSAMENTO!!! ------------')
+
+	print ('\n------------------ PROCESSING!!! ------------')
 
 	"""
 	Step1: Filter Raw
-	"""
-	print ('*** STEP 1 : FILTERING RAW ***')
+	"""	
 	filterRawOutput = filterRawInput(env, data, args);
+	
 	"""
 	Step2: Build Profiles
 	"""
-	print ('*** STEP 2 : BUILDING PROFILES ***')
 	buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
 
 	"""
 	step3: Calculate Similarity
 	"""
-	print ('*** STEP 3 : CALCULATING SIMILARITY ***')
 	output = calculateSimilarity(env, buildProfilesOutput, args);
 
-	output.write_text(stroutputFile, WriteMode.OVERWRITE );
+	output.write_text(strOutputFile, WriteMode.OVERWRITE );
 
-	print ('------------------ FINAL DO PROCESSAMENTO!!! ------------\n')
+	print ('------------------ END OF PROCESS!!! ------------\n')
 
 	"""
 	Execute
