@@ -131,7 +131,7 @@ class Profile(object):
 				self.lmi, self.tscore, self.zscore, self.dice, self.chisquare, self.loglike, self.affinity, self.entropy_target, self.entropy_context)
 
 	def returnResultAsStr(self):
-		return str(self.target)+"\t"+str(self.context)+"\t"+str(self.targetContextCount)+"\t"+str(self.targetCount)+"\t"+str(self.contextCount)+"\t"+\
+		return str(self.target)+"\t0.0\t"+str(self.context)+"\t0.0\t"+str(self.targetContextCount)+"\t"+str(self.targetCount)+"\t"+str(self.contextCount)+"\t"+\
 		       str(self.condProb)+"\t"+str(self.pmi)+"\t"+str(self.npmi)+"\t"+str(self.lmi)+"\t"+str(self.tscore)+"\t"+str(self.zscore)+"\t"+str(self.dice)+"\t"+str(self.chisquare)+"\t"+str(self.loglike)+"\t"+\
 		       str(self.affinity)+"\t"+str(self.entropy_target)+"\t"+str(self.entropy_context);
 	

@@ -50,7 +50,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	if bGenSteps: # Entrada da função será lida de arquivo
 		profiles = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.profiles" ).map(lambda line: (line.split("\t")));
 	else: 		    # Entrada é recebida em memória 
-		profiles = buildProfilesOutput;
+		profiles = buildProfilesOutput.map(lambda line: (line.split("\t")));
 
 	"""
 	" Processa entrada, extraindo header e filtrando dados

@@ -32,7 +32,7 @@ def buildProfiles(env, filterRawOutput, args):
 	" Processa entrada para ficar no formato: (target, context, valor) 
 	"""
 	if bGenSteps: # Entrada da função será lida de arquivo => ((target, context), valor) 
-		rawData = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.s.filter.t10.c10.tc2.u" ).map(lambda line: (line.split(" ")));
+		rawData = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.s.filter.t10.c10.tc2.u").map(lambda line: (line.split(" ")));
 
 	else: # Entrada é recebida por parametro  
 		rawData = filterRawOutput.map(lambda tuple: (tuple[0][0], tuple[0][1], tuple[1])); #converte de ((target, context), valor) para: (target, context, valor)
@@ -70,7 +70,6 @@ def buildProfiles(env, filterRawOutput, args):
 	OutputData = JoinedTargetsAndContextsEntropy.map(Profiler())\
 												.with_broadcast_set("broadcastPairs", nPairs)\
 												.map(lambda profile: profile.returnResultAsStr());
-
 	"""
 	" Output data "
 	"""		
