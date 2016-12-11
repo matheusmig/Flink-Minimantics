@@ -4,7 +4,7 @@
 # Extract Input from Corpus
 
 ## Imports
-import sys, argparse, os
+import sys, argparse, os, re
 
 from flink.plan.Environment import get_environment
 from flink.plan.Constants import WriteMode
@@ -27,8 +27,11 @@ def inputArgs():
 
 class LineZipper(FlatMapFunction):
 	def flat_map(self, line, collector):
-		for w1, w2 in zip(line.split(), line.split()[1:]): 
-			collector.collect( (w1, w2) );
+		for w1, w2 in zip(line.split(), line.split()[1:]):
+			w1 = re.sub('[^A-Za-z0-9]+', '', w1) #Remove caracteres especiais w1
+			w2 = re.sub('[^A-Za-z0-9]+', '', w2) #Remove caracteres especiais w2
+			if (len(w1) > 0) and (len(w2) > 0): 
+				collector.collect( (w1, w2) );
 
 
 if __name__ == "__main__":
