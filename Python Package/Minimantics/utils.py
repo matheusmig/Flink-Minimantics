@@ -158,99 +158,6 @@ class EntropyCalculator(FlatMapFunction):
 		collector.collect((palavra, totalCount, finalEntropy));
 
 
-# """
-# Name: Similaritier
-# 
-# Classe utilizada para especificar uma FlatMapFunction
-# Recebe dois targets com suas devidas listas de contexto, calcula a similaridade
-# 
-# Retorna a entropia de uma palavra
-#
-# Author: 23/07/2016 Matheus Mignoni
-#
-# """
-class Similaritier(FlatMapFunction):
-	def __init__(self, bCalculateDistance=None):
-		if bCalculateDistance is None:
-			self.bCalculateDistance = False; #Default value
-		else:
-			self.bCalculateDistance = bCalculateDistance;
-
-	def flat_map(self, value, collector):
-		target1     	= value[0][0]; 
-		sum1 	     	= value[0][1][0];
-		sum_square1   	= value[0][1][1];
-		dictOfContexts1 = json.loads(value[0][2]);
-		target2      	= value[1][0];
-		sum2 	     	= value[1][1][0];
-		sum_square2  	= value[1][1][1];
-		dictOfContexts2	= json.loads(value[1][2]);
-		""" Inicializações """
-		result       = Similarity();
-		sumsum       = 0.0
-		#contextDict1 = dictOfContexts1.dict;
-		contextDict1 = dictOfContexts1;
-		#contextDict2 = dictOfContexts2.dict;
-		contextDict2 = dictOfContexts2;
-
-		#Percorre lista de contexto da 1a
-		for k1, v1 in contextDict1.items():
-			if k1 in contextDict2:  # The context is shared by both target
-				v2 = contextDict2[k1];
-				sumsum += v1 + v2;
-				result.cosine += v1 * v2
-				if (self.bCalculateDistance):
-					absdiff = fabs(v1 - v2);
-					result.l1 	  += absdiff;
-					result.l2 	  += (absdiff * absdiff); 
-					result.askew1 += relativeEntropySmooth( v1, v2 );
-					result.askew2 += relativeEntropySmooth( v2, v1 );
-					avg            = (v1+v2)/2.0;
-					result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
-			else:
-				if (self.bCalculateDistance):
-					result.askew1 += relativeEntropySmooth( v1, 0 );
-					result.jsd    += relativeEntropySmooth( v1, v1/2.0);
-					result.l1     += v1;
-					result.l2     += v1 * v1;
-
-		#Distance measures use the union of contexts and require this part
-		if self.bCalculateDistance :
-			for k2, v2 in contextDict2.items():
-				if not (k2 in contextDict1):  # The context is not shared by both target
-					result.askew2 += relativeEntropySmooth( v2, 0 );
-					result.jsd    += relativeEntropySmooth( v2, v2/2.0 );
-					result.l1     += v2;      
-					result.l2     += v2 * v2;   
-
-			result.l2 = sqrt( result.l2 );
-
-		dividendo = sqrt(sum_square1) * sqrt(sum_square2);
-		if dividendo != 0:
-			result.cosine = result.cosine / dividendo
-
-		dividendo = sum1 + sum2
-		if dividendo != 0:
-			result.lin = sumsum / dividendo;
-
-		# Different version of jaccard: you are supposed to use it with 
-		# assoc_measures f_c or entropy_context. In this case, the sumsum value is 
-		# 2 * context_weights, and dividing by 2 is the same as averaging between 2 
-		# equal values. However, when used with different assoc_scores, this can give
-		# interesting results. To be tested. Should give similar results to Lin */
-		dividendo = sum1 + sum2 - (sumsum/2.0);
-		if dividendo != 0:
-			result.wjaccard = (sumsum/2.0) / dividendo;
-
-		result.randomic = random.random();
-
-		result.target1 = target1;
-		result.target2 = target2;
-
-		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
-		collector.collect(result);
-
-
 """ ReduceFunction """
 # """
 # Name: AddIntegers
@@ -538,6 +445,94 @@ class JoinTargetsCountAndEntropy(JoinFunction):
 class JoinContextsCountAndEntropy(JoinFunction):
 	def join(self, value1, value2):
 		return (value1[0], value1[1], value1[2], value1[3], (value2[1], value2[2]) );
+
+""" CrossFunction """
+# """
+# Name: Similaritier
+# 
+# Classe utilizada para especificar uma CrossFunction
+# Utilizado em CalculateSimilarity.py, aplicada durante o produto cartesiano dos TargetsContexts
+# 
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class Similaritier(CrossFunction):
+	def __init__(self, bCalculateDistance=None):
+		if bCalculateDistance is None:
+			self.bCalculateDistance = False; #Default value
+		else:
+			self.bCalculateDistance = bCalculateDistance;
+	
+	def cross(self, targetContext1, targetContext2):
+		target1     	= targetContext1[0]; 
+		sum1 	     	= targetContext1[1][0];
+		sum_square1   	= targetContext1[1][1];
+		contextDict1    = json.loads(targetContext1[2]);
+		target2      	= targetContext2[0];
+		sum2 	     	= targetContext2[1][0];
+		sum_square2  	= targetContext2[1][1];
+		contextDict2	= json.loads(targetContext2[2]);
+
+		""" Inicializações """
+		result       = Similarity();
+		sumsum       = 0.0
+
+		#Percorre lista de contexto da 1a
+		for k1, v1 in contextDict1.items():
+			if k1 in contextDict2:  # The context is shared by both target
+				v2 = contextDict2[k1];
+				sumsum += v1 + v2;
+				result.cosine += v1 * v2
+				if (self.bCalculateDistance):
+					absdiff = fabs(v1 - v2);
+					result.l1 	  += absdiff;
+					result.l2 	  += (absdiff * absdiff); 
+					result.askew1 += relativeEntropySmooth( v1, v2 );
+					result.askew2 += relativeEntropySmooth( v2, v1 );
+					avg            = (v1+v2)/2.0;
+					result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
+			else:
+				if (self.bCalculateDistance):
+					result.askew1 += relativeEntropySmooth( v1, 0 );
+					result.jsd    += relativeEntropySmooth( v1, v1/2.0);
+					result.l1     += v1;
+					result.l2     += v1 * v1;
+
+		#Distance measures use the union of contexts and require this part
+		if self.bCalculateDistance :
+			for k2, v2 in contextDict2.items():
+				if not (k2 in contextDict1):  # The context is not shared by both target
+					result.askew2 += relativeEntropySmooth( v2, 0 );
+					result.jsd    += relativeEntropySmooth( v2, v2/2.0 );
+					result.l1     += v2;      
+					result.l2     += v2 * v2;   
+
+			result.l2 = sqrt( result.l2 );
+
+		dividendo = sqrt(sum_square1) * sqrt(sum_square2);
+		if dividendo != 0:
+			result.cosine = result.cosine / dividendo
+
+		dividendo = sum1 + sum2
+		if dividendo != 0:
+			result.lin = sumsum / dividendo;
+
+		# Different version of jaccard: you are supposed to use it with 
+		# assoc_measures f_c or entropy_context. In this case, the sumsum value is 
+		# 2 * context_weights, and dividing by 2 is the same as averaging between 2 
+		# equal values. However, when used with different assoc_scores, this can give
+		# interesting results. To be tested. Should give similar results to Lin */
+		dividendo = sum1 + sum2 - (sumsum/2.0);
+		if dividendo != 0:
+			result.wjaccard = (sumsum/2.0) / dividendo;
+
+		result.randomic = random.random();
+
+		result.target1 = target1;
+		result.target2 = target2;
+
+		#collector.collect((palavra, (dictLinks, int(totalCount), float(finalEntropy))));
+		return result;
+
 
 
 

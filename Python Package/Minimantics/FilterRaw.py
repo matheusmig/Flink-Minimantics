@@ -69,9 +69,7 @@ def filterRawInput(env, inputFile, args):
 	#file.1.filter.t10.c10 => PairWordsFiltered
 	PairWordsFiltered  =  pairWords.join(targetsFiltered).where(0).equal_to(0).project_first(0,1)\
 								   .join(contextsFiltered).where(1).equal_to(0).project_first(0,1);
-								   #.group_by(0)\
-								   #.sort_group(0, Order.DESCENDING )\
-								   #.reduce_group(NothingReduce());
+								   
 	
 	if bGenSteps:		
 		PairWordsFiltered.write_text(strOutputFile+".filter.t"+str(wordLengthThreshold)+".c"+str(wordLengthThreshold)+".txt",  WriteMode.OVERWRITE );

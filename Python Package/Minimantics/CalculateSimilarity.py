@@ -47,10 +47,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	"""
 	" Lê entrada
 	"""
-	if bGenSteps: # Entrada da função será lida de arquivo
-		profiles = env.read_text("/Users/mmignoni/Desktop/TCC/mini.1.profiles" ).map(lambda line: (line.split("\t")));
-	else: 		    # Entrada é recebida em memória 
-		profiles = buildProfilesOutput.map(lambda line: (line.split("\t")));
+	profiles = buildProfilesOutput.map(lambda line: (line.split("\t")));
 
 	"""
 	" Processa entrada, extraindo header e filtrando dados
@@ -126,24 +123,11 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 
 
 	""" Cacula similaridade """
-	# Faz a combinação cartesiana de todos os targets, junto com sua soma, soma quadrática e lista de contexts
-	targetsCartesian = targetContexts.cross(targetContexts);
-
-	if bGenSteps:
-		targetsCartesian.write_text(strOutputFile+".SimilarityTargetsCartesian.txt", WriteMode.OVERWRITE );
-
-	# TODO: é possível aumentar a eficiência dessa operação?
-	# OBS:
-	# target1      = i[0][0]; 
-	# sum1 		   = i[0][1][0];
-	# sum_square1  = i[0][1][1];
-	# contextDict1 = i[0][1][2];
-	# target2      = i[1][0];
-	# sum2 		   = i[1][1][0];
-	# sum_square2  = i[1][1][1];
-	# contextDict2 = i[1][1][2];
-	CalculatedSimilarities = targetsCartesian.flat_map(Similaritier(bCalculateDistance));
-														                  
+	# Faz a combinação cartesiana de todos os targets, junto com sua soma, soma quadrática e lista de contexts. 
+	# E já cria os Similarities
+	CalculatedSimilarities = targetContexts.cross(targetContexts) \
+									 .using(Similaritier(bCalculateDistance));
+										                  
 	if bGenSteps:
 		a = CalculatedSimilarities.map(lambda similarity : similarity.returnResultAsStr());
 		a.write_text(strOutputFile+".CalculatedSimilarities.txt", WriteMode.OVERWRITE );
@@ -153,9 +137,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 								        .map(lambda similarity : similarity.returnResultAsStr( bOnlyCosinesOutput ));
 
 	if bGenSteps or bSaveOutput:
-		#OutputHeader = env.from_elements(Similarity.returnHeader());
-		#OutputHeader.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );
-		OutputData.write_text(strOutputFile+".CalculatesSimilarityOutput.txt", WriteMode.OVERWRITE );
+		OutputData.write_text(strOutputFile+".CalculatedSimilarityOutput.txt", WriteMode.OVERWRITE );
 		return OutputData;
 	else:
 		return OutputData;
