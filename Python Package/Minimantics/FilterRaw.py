@@ -27,12 +27,13 @@ def filterRawInput(env, inputFile, args):
 	pairCountThreshold  = vars(args)['FilterPairThresh']
 	bGenSteps     		= vars(args)['GenerateSteps']
 	strOutputFile       = vars(args)['OutFile'];
+	bSortOutput			= vars(args)['SortOutput'];
 
 	"""
 	" Lê input file linha a linha, dividindo a linha em uma tupla chamada pairWords = (targetWord, contextWord) "
 	"""
 	pairWords = inputFile.map( lambda line: line.split(" ") )\
-						 .map( lambda tuple: (tuple[0].lower().strip(), tuple[1].lower().strip()));
+						 .map( lambda tuple: (tuple[0].strip(), tuple[1].strip()));
 	
 	"""
 	"Filtering, sorting and uniquing raw triples in inputfile"
@@ -78,8 +79,9 @@ def filterRawInput(env, inputFile, args):
 	#file.1.filter.t10.c10.tc2.u => sortedPairWordsFilteredUniqueCount
 	PairWordsFilteredUniqueCount = PairWordsFiltered.map( lambda tuple : ( (tuple[0], tuple[1]) , 1) )\
 													.group_by(0).reduce(Adder())\
-													.filter(lambda tuple : tuple[1] >= pairCountThreshold)\
-													.group_by(0)\
+													.filter(lambda tuple : tuple[1] >= pairCountThreshold);
+	if bSortOutput:
+		PairWordsFilteredUniqueCount = 	PairWordsFilteredUniqueCount.group_by(0)\
 													.sort_group((lambda tuple : tuple[0][0]), Order.ASCENDING )\
 													.sort_group((lambda tuple : tuple[0][1]), Order.ASCENDING )\
 													.reduce_group(NothingReduce());
