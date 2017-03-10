@@ -16,6 +16,7 @@ from Minimantics.CalculateSimilarity import *
 
 import sys, argparse
 from datetime import datetime
+from ast import literal_eval
 
 # """
 # Name: inputArgs
@@ -29,9 +30,7 @@ def inputArgs():
 	parser.add_argument('-i', '--input',                                            dest='InFile') 		            #Nome do arquivo de entrada
 	parser.add_argument('-o', '--output',                              default='',  dest='OutFile')		            #Nome do arquivo de saída
 	parser.add_argument('--steps',               action='store_const', const=True,  dest='GenerateSteps')           #Flag que indica se deve gerar TODOS arquivos intermediários de saída durante as etapas do algoritmo
-	parser.add_argument('--save_filterraw',      action='store_const', const=True,  dest='GenerateFilterRaw')       #Flag que indica se deve gerar o arquivo de saída para a fase 1 (FilterRaw)
-	parser.add_argument('--save_buildprofile',   action='store_const', const=True,  dest='GenerateBuildProfile')    #Flag que indica se deve gerar o arquivo de saída para a fase 2 (BuildProfiles)
-	parser.add_argument('--save_calcsimilarity', action='store_const', const=True,  dest='GenerateCalcSimilarity')  #Flag que indica se deve gerar o arquivo de saída para a fase 3 (CalculateSimilarity)
+	parser.add_argument('--stage',                                     default='',  dest='StageSelector')           #Flag que indica quais estágios do algritmo iremos rodar. '' = todos, FR = FilterRaw, BP = BuildProfiles, CS = CalcSimilarity
 	parser.add_argument('-a',                                 default="cond_prob",  dest='AssocName')   	        #used in CalculateSimilarity
 	parser.add_argument('-s',                                          default='',  dest='Scores')		            #used in CalculateSimilarity
 	parser.add_argument('-t',                                          default=[],  dest='TargetsWordsFiltered')    #used in CalculateSimilarity. Lista de targets que serão ignorados e removidos durante processamento
@@ -75,26 +74,33 @@ def process( args ):
 	"""
 	Input File
 	"""
-	strInputFile  = vars(args)['InFile'];
-	strOutputFile = vars(args)['OutFile'];
-	data 		  = env.read_text(strInputFile); #Lê do arquivo
+	strInputFile   = vars(args)['InFile'];
+	strOutputFile  = vars(args)['OutFile'];
+	bStageSelector = vars(args)['StageSelector']
+	data 		   = env.read_text(strInputFile); #Lê do arquivo
 
 	print ('\n------------------ PROCESSING!!! ------------')
 
-	"""
-	Step1: Filter Raw
-	"""	
-	filterRawOutput = filterRawInput(env, data, args);
-	
-	"""
-	Step2: Build Profiles
-	"""
-	buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
+	#only FilterRaw stage
+	if bStageSelector == 'FR':
+		output = filterRawInput(env, data, args);
 
-	"""
-	step3: Calculate Similarity
-	"""
-	output = calculateSimilarity(env, buildProfilesOutput, args);
+	#only BuildProfiles stage
+	elif bStageSelector == 'BP':
+		data   = data.map( lambda line:  tuple(word.strip() for word in line.replace('(','').replace(')','').split(',')))\
+				     .map( lambda tuple: ((tuple[0], tuple[1]),tuple[2])) ;
+		output = buildProfiles(env, data, args);
+
+	#only CalculateSimilarity stage
+	elif bStageSelector == 'CS':
+		output = calculateSimilarity(env, data, args);
+
+	#ALL stages
+	else:
+		filterRawOutput     = filterRawInput(env, data, args);
+		buildProfilesOutput = buildProfiles(env, filterRawOutput, args);
+		output              = calculateSimilarity(env, buildProfilesOutput, args);
+
 
 	output.write_text(strOutputFile, WriteMode.OVERWRITE );
 

@@ -26,7 +26,6 @@ def filterRawInput(env, inputFile, args):
 	wordLengthThreshold = vars(args)['FilterWordThresh']
 	pairCountThreshold  = vars(args)['FilterPairThresh']
 	bGenSteps     		= vars(args)['GenerateSteps']
-	bSaveOutput   		= vars(args)['GenerateFilterRaw']
 	strOutputFile       = vars(args)['OutFile'];
 
 	"""
@@ -86,7 +85,7 @@ def filterRawInput(env, inputFile, args):
 													.reduce_group(NothingReduce());
 										            
 	
-	if bGenSteps or bSaveOutput:
+	if bGenSteps:
 		PairWordsFilteredUniqueCount.write_text(strOutputFile+".filterRawOutput.txt", WriteMode.OVERWRITE );
 	
 	return PairWordsFilteredUniqueCount

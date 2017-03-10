@@ -25,7 +25,6 @@ def buildProfiles(env, filterRawOutput, args):
 	" Inicialização de variáveis a partir do argumento de entrada "
 	"""
 	bGenSteps     = vars(args)['GenerateSteps']
-	bSaveOutput   = vars(args)['GenerateBuildProfile']
 	strOutputFile = vars(args)['OutFile'];
 	
 	"""
@@ -69,13 +68,12 @@ def buildProfiles(env, filterRawOutput, args):
 	"""
 	" Output data "
 	"""		
-	if bGenSteps or bSaveOutput:
+	if bGenSteps:
 		#OutputHeader = env.from_elements(Profile.returnHeader());
 		#OutputHeader.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
 		OutputData.write_text(strOutputFile+".BuildProfilesOutput.txt", WriteMode.OVERWRITE );
-		return OutputData;
-	else:
-		return OutputData;
+
+	return OutputData;
 
 
 

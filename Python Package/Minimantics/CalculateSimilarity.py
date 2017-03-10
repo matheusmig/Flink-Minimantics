@@ -31,7 +31,6 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	"""
 	strOutputFile               = vars(args)['OutFile'];
 	bGenSteps 				    = vars(args)['GenerateSteps']
-	bSaveOutput 				= vars(args)['GenerateCalcSimilarity']	
 	bCalculateDistance          = vars(args)['CalculateDistances']
 	AssocName   				= vars(args)['AssocName']
 	minScores 					= vars(args)['Scores']				     
@@ -136,11 +135,10 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	OutputData = CalculatedSimilarities.filter(OutputSim(lstTargetsWordsFiltered, lstNeighborWordsFiltered, nSimThreshold, nDistThreshold))\
 								        .map(lambda similarity : similarity.returnResultAsStr( bOnlyCosinesOutput ));
 
-	if bGenSteps or bSaveOutput:
+	if bGenSteps:
 		OutputData.write_text(strOutputFile+".CalculatedSimilarityOutput.txt", WriteMode.OVERWRITE );
-		return OutputData;
-	else:
-		return OutputData;
+
+	return OutputData;
 
 
 
