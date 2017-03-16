@@ -97,9 +97,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	   - targets na lista de neighboors a ignorar 
 	"""
 	filteredData = profiles.filter( lambda tuple: float(tuple[targetContextCountIndex]) >= nAssocThreshold)\
-	                       .filter( FilterFromList(targetIndex , lstTargetsWordsFiltered))\
-	                       .filter( FilterFromList(contextIndex, lstContextWordsFiltered))\
-	                       .filter( FilterFromList(targetIndex , lstNeighborWordsFiltered));
+						   .filter( FilterFromLists(lstTargetsWordsFiltered, lstContextWordsFiltered, lstNeighborWordsFiltered));
 
 	if bGenSteps:
 		filteredData.write_text(strOutputFile+".SimilarityFilteredData.txt", WriteMode.OVERWRITE );
@@ -125,7 +123,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	# Faz a combinação cartesiana de todos os targets, junto com sua soma, soma quadrática e lista de contexts. 
 	# E já cria os Similarities
 	CalculatedSimilarities = targetContexts.cross(targetContexts) \
-									 .using(Similaritier(bCalculateDistance));
+									       .using(Similaritier(bCalculateDistance));
 										                  
 	if bGenSteps:
 		a = CalculatedSimilarities.map(lambda similarity : similarity.returnResultAsStr());
@@ -134,7 +132,7 @@ def calculateSimilarity(env, buildProfilesOutput, args):
 	""" Processa formato de saída """
 	OutputData = CalculatedSimilarities.filter(OutputSim(lstTargetsWordsFiltered, lstNeighborWordsFiltered, nSimThreshold, nDistThreshold))\
 								        .map(lambda similarity : similarity.returnResultAsStr( bOnlyCosinesOutput ));
-
+	
 	if bGenSteps:
 		OutputData.write_text(strOutputFile+".CalculatedSimilarityOutput.txt", WriteMode.OVERWRITE );
 

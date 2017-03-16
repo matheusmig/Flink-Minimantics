@@ -77,7 +77,7 @@ def relativeEntropySmooth(p1, p2):
 	if (p1 == 0.0):
 		return 0.0; #If p1=0, then product is 0. If p2=0, then smoothed  
 	else:
-		return p1 * log( p1 / (ALPHA * p2 + NALPHA * p1 ) );
+		return p1 * (log( p1 / ((ALPHA * p2) + (NALPHA * p1) )) );
 
 
 """
@@ -300,15 +300,12 @@ class TargetContextsGrouper(GroupReduceFunction):
 			target     = key;
 			sum_       += value[0]
 			sum_square += value[1]
-			if value[2][0] in dictContexts.keys():
-				dictContexts[value[2][0]] = dictContexts[value[2][0]] + value[2][1];
+			context    = value[2][0]
+			contextVal = value[2][1]
+			if context in dictContexts.keys():
+				dictContexts[context] = dictContexts[context] + contextVal;
 			else:
-				dictContexts[value[2][0]] = value[2][1];
-
-		#for key2, value2 in dictContexts.items():
-			#collector.collect( (target, ((sum, sum_square), (key, value))) );
-			#collector.collect( ((target, int(sum), int(sum_square)), (key2, int(value2))) );
-			#collector.collect( (target, (int(sum), int(sum_square)), (key2, value2)) );
+				dictContexts[context] = contextVal;
 
 		a = DictOfContexts(dictContexts)
 		collector.collect( (target, (sum_, sum_square), a.returnResultAsStr())  );
@@ -322,16 +319,28 @@ class TargetContextsGrouper(GroupReduceFunction):
 # 
 # Author: 23/07/2016 Matheus Mignoni
 # """
-class FilterFromList(FilterFunction):
-	def __init__(self, index, list):
-		self.index = index;
-		self.list = list;
+#class FilterFromList(FilterFunction):
+#	def __init__(self, indexParam, listParam):
+#		self.index = indexParam;
+#		self.listFiltereds = list(listParam);
+#
+#	def filter(self, value):
+#		if value[self.index] not in self.listFiltereds:
+#			return True
+#		else:
+#			return False
+
+class FilterFromLists(FilterFunction):
+	def __init__(self, listTargets, listContexts, listNeighbors):
+		self.listTargets    = list(listTargets);
+		self.listContexts   = list(listContexts);
+		self.listNeighbors  = list(listNeighbors);
 
 	def filter(self, value):
-		if value[self.index] not in self.list:
+		if (value[0] not in self.listTargets) and (value[0] not in self.listNeighbors) and (value[2] not in self.listContexts):
 			return True
 		else:
-			return False
+			return False;
 
 # """
 # Name: OutputSim
@@ -342,8 +351,8 @@ class FilterFromList(FilterFunction):
 # """
 class OutputSim(FilterFunction):
 	def __init__(self, lst_tfilter, lst_nfilter, simThresh, distThresh):
-		self.lst_tfilter = lst_tfilter;
-		self.lst_nfilter = lst_nfilter;
+		self.lst_tfilter = list(lst_tfilter);
+		self.lst_nfilter = list(lst_nfilter);
 
 		self.simThresh  = simThresh;
 		self.distThresh = distThresh;
@@ -358,8 +367,11 @@ class OutputSim(FilterFunction):
 			return False
 		else:
 			#Filter simThreshold and distThreshold
-			if ((self.simThresh  != -99999) and ((value.cosine < self.simThresh) or (value.wjaccard < self.simThresh) or (value.lin < self.simThresh))) or\
-			   ((self.distThresh != -99999) and ((value.lin > self.distThresh) or (value.l1 > self.distThresh) or (value.l2 > self.distThresh) or (value.jsd > self.distThresh))):
+			#if ((self.simThresh  != -9999.0) and ((value.cosine < self.simThresh) and (value.wjaccard < self.simThresh) and (value.lin < self.simThresh))) or\
+			#   ((self.distThresh != -9999.0) and ((value.lin > self.distThresh) and (value.l1 > self.distThresh) and (value.l2 > self.distThresh) and (value.jsd > self.distThresh))):
+			if ((self.simThresh  != -9999.0) and (value.cosine < self.simThresh)) or\
+			   ((self.distThresh != -9999.0) and ((value.lin > self.distThresh) and (value.l1 > self.distThresh) and (value.l2 > self.distThresh) and (value.jsd > self.distThresh))):
+			
 				return False; #OBS: Não estamos levando em consideração a medida askew1 e askew2
 			else:
 				return True;
@@ -464,17 +476,17 @@ class Similaritier(CrossFunction):
 	
 	def cross(self, targetContext1, targetContext2):
 		target1     	= targetContext1[0]; 
-		sum1 	     	= targetContext1[1][0];
-		sum_square1   	= targetContext1[1][1];
+		sum1 	     	= float(targetContext1[1][0]);
+		sum_square1   	= float(targetContext1[1][1]);
 		contextDict1    = json.loads(targetContext1[2]);
 		target2      	= targetContext2[0];
-		sum2 	     	= targetContext2[1][0];
-		sum_square2  	= targetContext2[1][1];
+		sum2 	     	= float(targetContext2[1][0]);
+		sum_square2  	= float(targetContext2[1][1]);
 		contextDict2	= json.loads(targetContext2[2]);
 
 		""" Inicializações """
 		result       = Similarity();
-		sumsum       = 0.0
+		sumsum       = 0.0;
 
 		#Percorre lista de contexto da 1a
 		for k1, v1 in contextDict1.items():
@@ -488,7 +500,7 @@ class Similaritier(CrossFunction):
 					result.l2 	  += (absdiff * absdiff); 
 					result.askew1 += relativeEntropySmooth( v1, v2 );
 					result.askew2 += relativeEntropySmooth( v2, v1 );
-					avg            = (v1+v2)/2.0;
+					avg            = (v1+v2)/2;
 					result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
 			else:
 				if (self.bCalculateDistance):
@@ -512,7 +524,7 @@ class Similaritier(CrossFunction):
 		if dividendo != 0:
 			result.cosine = result.cosine / dividendo
 
-		dividendo = sum1 + sum2
+		dividendo = sum1 + sum2;
 		if dividendo != 0:
 			result.lin = sumsum / dividendo;
 
