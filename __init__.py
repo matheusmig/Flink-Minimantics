@@ -59,11 +59,12 @@ def process( args ):
 	"""
 	Start Flink Environment
 	"""
-	env = get_environment()
-	
 	if ((args == None) and (vars(args)['InFile'] == None)
 	                   and (vars(args)['OutFile'] == None)):
 		sys.exit('Input File and/or Output File aren\'t defined')
+
+	env = get_environment()
+	#env.set_parallelism(4);
 
 	"""
 	Custom types 
@@ -110,7 +111,7 @@ def process( args ):
 	"""
 	Execute
 	"""
-	env.execute(local=True)
+	env.execute(local=False)
 
 # """
 # Name: Main function
