@@ -44,6 +44,7 @@ def inputArgs():
 	parser.add_argument('--only_cosines',        action='store_const', const=True,  dest='OnlyCosines')             #Flag que indica se queremos gerar o arquivo de saída contendo como unica medida de similaridade a similiridade por coseno 
 	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
 	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
+	parser.add_argument('-P',                          type=int,        default=1,  dest='FlinkParallelism')        #Set Flink environment parallelism level
 	args, unknown = parser.parse_known_args()
 	return args,unknown;
 
@@ -64,7 +65,7 @@ def process( args ):
 		sys.exit('Input File and/or Output File aren\'t defined')
 
 	env = get_environment()
-	#env.set_parallelism(4);
+	env.set_parallelism(vars(args)['FlinkParallelism']);
 
 	"""
 	Custom types 
