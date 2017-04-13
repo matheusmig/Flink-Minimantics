@@ -131,6 +131,92 @@ class ExistElement(FlatMapFunction):
 			collector.collect(True);
 
 # """
+# Name: SimilaritierFlat
+# 
+# Classe utilizada para especificar uma FlatMapFunction
+# Procura se um determinad elemento existe no dataset
+# 
+# Author: 23/07/2016 Matheus Mignoni
+# """
+class SimilaritierFlat(FlatMapFunction):
+	def flat_map(self, value, collector):
+		target1      	= value[0]; 
+		sum1     	    = float(value[1][0]);
+		sum_square1   	= float(value[1][1]);
+		contextDict1    = json.loads(value[2]);
+
+		broadTargets = self.context.get_broadcast_variable("bdt")[0];
+
+		for targetTuple2 in broadTargets:
+			target2      	= targetTuple2[0]; 
+			sum2     	    = float(targetTuple2[1][0]);
+			sum_square2   	= float(targetTuple2[1][1]);
+			contextDict2    = json.loads(targetTuple2[2]);
+			
+			""" Inicializações """
+			result       = Similarity();
+			sumsum       = 0.0;
+
+			#Percorre lista de contexto da 1a
+			for k1, v1 in contextDict1.items():
+				if k1 in contextDict2:  # The context is shared by both target
+					v2 = contextDict2[k1];
+					sumsum += v1 + v2;
+					result.cosine += v1 * v2
+					if (self.bCalculateDistance):
+						absdiff = fabs(v1 - v2);
+						result.l1 	  += absdiff;
+						result.l2 	  += (absdiff * absdiff); 
+						result.askew1 += relativeEntropySmooth( v1, v2 );
+						result.askew2 += relativeEntropySmooth( v2, v1 );
+						avg            = (v1+v2)/2;
+						result.jsd    += relativeEntropySmooth( v1, avg ) + relativeEntropySmooth( v2, avg );		
+				else:
+					if (self.bCalculateDistance):
+						result.askew1 += relativeEntropySmooth( v1, 0 );
+						result.jsd    += relativeEntropySmooth( v1, v1/2.0);
+						result.l1     += v1;
+						result.l2     += v1 * v1;
+
+			#Distance measures use the union of contexts and require this part
+			if self.bCalculateDistance :
+				for k2, v2 in contextDict2.items():
+					if not (k2 in contextDict1):  # The context is not shared by both target
+						result.askew2 += relativeEntropySmooth( v2, 0 );
+						result.jsd    += relativeEntropySmooth( v2, v2/2.0 );
+						result.l1     += v2;      
+						result.l2     += v2 * v2;   
+
+				result.l2 = sqrt( result.l2 );
+
+			dividendo = sqrt(sum_square1) * sqrt(sum_square2);
+			if dividendo != 0:
+				result.cosine = result.cosine / dividendo
+
+			dividendo = sum1 + sum2;
+			if dividendo != 0:
+				result.lin = sumsum / dividendo;
+
+			# Different version of jaccard: you are supposed to use it with 
+			# assoc_measures f_c or entropy_context. In this case, the sumsum value is 
+			# 2 * context_weights, and dividing by 2 is the same as averaging between 2 
+			# equal values. However, when used with different assoc_scores, this can give
+			# interesting results. To be tested. Should give similar results to Lin */
+			dividendo = sum1 + sum2 - (sumsum/2.0);
+			if dividendo != 0:
+				result.wjaccard = (sumsum/2.0) / dividendo;
+
+			result.randomic = random.random();
+
+			result.target1 = target1;
+			result.target2 = target2;
+
+			collector.collect((result));
+			#return result;
+
+
+
+# """
 # Name: EntropyCalculator
 # 
 # Classe utilizada para especificar uma FlatMapFunction
@@ -228,7 +314,7 @@ class Adder(GroupReduceFunction):
 	def reduce(self, iterator, collector): #The reduce method. The function receives one call per group of elements.
 		word, count = iterator.next()
 		count += sum([x[1] for x in iterator])
-		collector.collect((word, count))
+		collector.collect((word, int(count)))
 
 
 # """
@@ -298,17 +384,13 @@ class TargetContextsGrouper(GroupReduceFunction):
 
 		for key,value in iterator:
 			target     = key;
-			sum_       += value[0]
-			sum_square += value[1]
-			context    = value[2][0]
-			contextVal = value[2][1]
-			if context in dictContexts.keys():
-				dictContexts[context] = dictContexts[context] + contextVal;
-			else:
-				dictContexts[context] = contextVal;
+			context    = value[0]
+			sum_       += value[1]
+			sum_square += value[1] * value[1]
+			dictContexts[context] = value[1]
 
-		a = DictOfContexts(dictContexts)
-		collector.collect( (target, (sum_, sum_square), a.returnResultAsStr())  );
+		#a = DictOfContexts(dictContexts)
+		collector.collect( (target, (sum_, sum_square), json.dumps(dictContexts))  );
 
 		
 """ FilterFunction """

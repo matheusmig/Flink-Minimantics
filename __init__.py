@@ -45,6 +45,8 @@ def inputArgs():
 	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
 	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
 	parser.add_argument('-P',                          type=int,        default=1,  dest='FlinkParallelism')        #Set Flink environment parallelism level
+	parser.add_argument('--local',               action='store_const', const=True,  dest='FlinkLocalExecution')     #Set Flink to run locally
+	
 	args, unknown = parser.parse_known_args()
 	return args,unknown;
 
@@ -65,7 +67,8 @@ def process( args ):
 		sys.exit('Input File and/or Output File aren\'t defined')
 
 	env = get_environment()
-	env.set_parallelism(vars(args)['FlinkParallelism']);
+	nParallelism = vars(args)['FlinkParallelism'];
+	env.set_parallelism(nParallelism);
 
 	"""
 	Custom types 
@@ -112,7 +115,8 @@ def process( args ):
 	"""
 	Execute
 	"""
-	env.execute(local=False)
+	bRunLocal = vars(args)['FlinkLocalExecution']
+	env.execute(bRunLocal)
 
 # """
 # Name: Main function
