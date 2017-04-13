@@ -29,7 +29,7 @@ def inputArgs():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-i', '--input',                                            dest='InFile') 		            #Nome do arquivo de entrada
 	parser.add_argument('-o', '--output',                              default='',  dest='OutFile')		            #Nome do arquivo de saída
-	parser.add_argument('--steps',               action='store_const', const=True,  dest='GenerateSteps')           #Flag que indica se deve gerar TODOS arquivos intermediários de saída durante as etapas do algoritmo
+	parser.add_argument('--steps',              action='store_const', const=False,  dest='GenerateSteps')           #Flag que indica se deve gerar TODOS arquivos intermediários de saída durante as etapas do algoritmo
 	parser.add_argument('--sort',               action='store_const', const=False,  dest='SortOutput')              #Flag que indica se o arquivo de saída gravado será ordenado
 	parser.add_argument('--stage',                                     default='',  dest='StageSelector')           #Flag que indica quais estágios do algritmo iremos rodar. '' = todos, FR = FilterRaw, BP = BuildProfiles, CS = CalcSimilarity
 	parser.add_argument('-a',                                 default="cond_prob",  dest='AssocName')   	        #used in CalculateSimilarity
@@ -45,7 +45,7 @@ def inputArgs():
 	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
 	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
 	parser.add_argument('-P',                          type=int,        default=1,  dest='FlinkParallelism')        #Set Flink environment parallelism level
-	parser.add_argument('--local',               action='store_const', const=True,  dest='FlinkLocalExecution')     #Set Flink to run locally
+	parser.add_argument('--local',              action='store_const', const=False,  dest='FlinkLocalExecution')     #Set Flink to run locally
 	
 	args, unknown = parser.parse_known_args()
 	return args,unknown;
