@@ -115,7 +115,10 @@ def process( args ):
 	"""
 	Execute
 	"""
-	bRunLocal = vars(args)['FlinkLocalExecution']
+	if vars(args)['FlinkLocalExecution'] then
+		bRunLocal = True
+	else
+		bRunLocal = False
 	env.execute(bRunLocal)
 
 # """
