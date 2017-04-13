@@ -115,7 +115,7 @@ def process( args ):
 	"""
 	Execute
 	"""
-	if vars(args)['FlinkLocalExecution'] then
+	if vars(args)['FlinkLocalExecution']:
 		bRunLocal = True
 	else
 		bRunLocal = False
