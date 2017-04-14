@@ -45,7 +45,7 @@ def inputArgs():
 	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
 	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
 	parser.add_argument('-P',                          type=int,        default=1,  dest='FlinkParallelism')        #Set Flink environment parallelism level
-	parser.add_argument('--local',              action='store_const', const=False,  dest='FlinkLocalExecution')     #Set Flink to run locally
+	parser.add_argument('--local',                            action='store_true',  dest='FlinkLocalExecution')     #Set Flink to run locally
 	
 	args, unknown = parser.parse_known_args()
 	return args,unknown;
@@ -73,9 +73,9 @@ def process( args ):
 	"""
 	Custom types 
 	"""
-	env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
-	env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
-	env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
+	#env.register_type(Profile   	, ProfileSerializer()   	, ProfileDeserializer());
+	#env.register_type(Similarity    , SimilaritySerializer()	, SimilarityDeserializer());
+	#env.register_type(DictOfContexts, DictOfContextsSerializer(), DictOfContextsDeserializer());
 	
 	"""
 	Input File
@@ -115,11 +115,8 @@ def process( args ):
 	"""
 	Execute
 	"""
-	if vars(args)['FlinkLocalExecution']:
-		bRunLocal = True
-	else:
-		bRunLocal = False
-	env.execute(bRunLocal)
+	bRunLocal = bool(vars(args)['FlinkLocalExecution']) 
+	env.execute( bRunLocal )
 
 # """
 # Name: Main function

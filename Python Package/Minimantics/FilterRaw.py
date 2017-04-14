@@ -78,7 +78,7 @@ def filterRawInput(env, inputFile, args):
 	""" uniquing and couting """
 	#file.1.filter.t10.c10.tc2.u => sortedPairWordsFilteredUniqueCount
 	PairWordsFilteredUniqueCount = PairWordsFiltered.map( lambda tuple : ( (tuple[0], tuple[1]) , 1) )\
-													.group_by(0).reduce(Adder())\
+													.group_by(0).reduce_group(Adder())\
 													.filter(lambda tuple : tuple[1] >= pairCountThreshold);
 	if bSortOutput:
 		PairWordsFilteredUniqueCount = 	PairWordsFilteredUniqueCount.group_by(0)\
