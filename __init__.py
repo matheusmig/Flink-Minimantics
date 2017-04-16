@@ -45,7 +45,8 @@ def inputArgs():
 	parser.add_argument('-FW',                         type=int,        default=0,  dest='FilterWordThresh')        #used in FilterRaw. Número mínimo de vezes que uma palavra tem que aparecer no arquivo de entrada para ter sua semelhança calculada.
 	parser.add_argument('-FP',                         type=int,        default=0,  dest='FilterPairThresh')        #used in FilterRaw. Número mínimo de vezes que uma dupla de palavras deve repetir-se no arquivo de arquivo de entrada, para que seja levada em consideração .
 	parser.add_argument('-P',                          type=int,        default=1,  dest='FlinkParallelism')        #Set Flink environment parallelism level
-	parser.add_argument('--local',                            action='store_true',  dest='FlinkLocalExecution')     #Set Flink to run locally
+	parser.add_argument('--local',                            action='store_true',  dest='FlinkLocalExecution')     #Set whether will Flink run locally or in a cluster
+	parser.add_argument('--execution_retries',         type=int,        default=0,  dest='FlinkExectionRetries')    #Set the number of time that Flink retries the execution before the job is declared as failed
 	
 	args, unknown = parser.parse_known_args()
 	return args,unknown;
@@ -66,9 +67,17 @@ def process( args ):
 	                   and (vars(args)['OutFile'] == None)):
 		sys.exit('Input File and/or Output File aren\'t defined')
 
+	"""
+	Environment Configuration
+	"""
 	env = get_environment()
+
 	nParallelism = vars(args)['FlinkParallelism'];
 	env.set_parallelism(nParallelism);
+
+	nRetries = vars(args)['FlinkExectionRetries'];	
+	env.set_number_of_execution_retries(nRetries);
+
 
 	"""
 	Custom types 
