@@ -24,7 +24,7 @@ c_BuildProfilesOutputFile = "BuildProfilesOutput"
 Classes
 """
 def PRODLOG(a, b): #Evita calcular log(0)
-	if (a != 0) and (b != 0) and (not decimal.Decimal.is_nan(a)) and (not decimal.Decimal.is_nan(b)):
+	if (a > 0) and (b > 0) and (not decimal.Decimal.is_nan(a)) and (not decimal.Decimal.is_nan(b)):
 		aDec = decimal.Decimal(a);
 		bDec = decimal.Decimal(b).ln();
 		return aDec * bDec;
