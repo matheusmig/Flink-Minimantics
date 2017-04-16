@@ -24,7 +24,7 @@ c_BuildProfilesOutputFile = "BuildProfilesOutput"
 Classes
 """
 def PRODLOG(a, b): #Evita calcular log(0)
-	if (a != 0) and (b != 0):
+	if (a != 0) and (b != 0) and (not decimal.Decimal.is_nan(a)) and (not decimal.Decimal.is_nan(b)):
 		aDec = decimal.Decimal(a);
 		bDec = decimal.Decimal(b).ln();
 		return aDec * bDec;
@@ -34,7 +34,7 @@ def PRODLOG(a, b): #Evita calcular log(0)
 class Profile(object):
 	#Construtor com 8 parâmetros básicos, infere os outros 10 parâmetros a partir dos básicos.
 	def __init__(self, target, context, targetContextCount, targetCount, contextCount, entropy_target, entropy_context, nPairs):
-		decimal.getcontext().prec = 28
+		#decimal.getcontext().prec = 28
 
 		self.target             = target;
 		self.context            = context
