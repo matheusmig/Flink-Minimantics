@@ -63,7 +63,9 @@ class Profile(object):
 
 	def PRODLOG(self, a, b): #Evita calcular log(0)
 		if a != 0 and b != 0:
-			return a * b.ln()
+			aDec = decimal.Decimal(a)
+			bDec = decimal.Decimal(b)
+			return aDec * bDec.ln()
 		else:
 			return 0
 
@@ -109,16 +111,16 @@ class Profile(object):
 		r1 = 0; r2 = 0; r3 = 0; r4 = 0;
 
 		if self.ew1w2 != 0:
-			r1 = self.PRODLOG( decimal.Decimal(self.targetContextCount) , decimal.Decimal(self.targetContextCount / self.ew1w2) );
+			r1 = self.PRODLOG( self.targetContextCount , self.targetContextCount / self.ew1w2 );
 
 		if self.ew1nw2 != 0:
-			r2 = self.PRODLOG( decimal.Decimal(self.cw1nw2)             , decimal.Decimal(self.cw1nw2  / self.ew1nw2)  );
+			r2 = self.PRODLOG( self.cw1nw2             , self.cw1nw2  / self.ew1nw2  );
 
 		if self.enw1w2 != 0:
-			r3 = self.PRODLOG( decimal.Decimal(self.cnw1w2)             , decimal.Decimal(self.cnw1w2  / self.enw1w2)  );
+			r3 = self.PRODLOG( self.cnw1w2             , self.cnw1w2  / self.enw1w2  );
 
 		if self.enw1nw2 != 0:
-			r4 = self.PRODLOG( decimal.Decimal(self.cnw1nw2)            , decimal.Decimal(self.cnw1nw2 / self.enw1nw2) );
+			r4 = self.PRODLOG( self.cnw1nw2            , self.cnw1nw2 / self.enw1nw2 );
 
 		return 2 * (r1 + r2 + r3 + r4);
 	
