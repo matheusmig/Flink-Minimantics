@@ -63,9 +63,10 @@ class Profile(object):
 
 	def PRODLOG(self, a, b): #Evita calcular log(0)
 		if a != 0 and b != 0:
-			aDec = decimal.Decimal(a)
-			bDec = decimal.Decimal(b)
-			return aDec * bDec.ln()
+			aDec = decimal.Decimal(a);
+			bDec = decimal.Decimal(b);
+			bDecLn = bDec.ln();
+			return aDec * bDecLn;
 		else:
 			return 0
 
