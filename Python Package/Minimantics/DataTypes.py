@@ -23,6 +23,14 @@ c_BuildProfilesOutputFile = "BuildProfilesOutput"
 """ 
 Classes
 """
+def PRODLOG(a, b): #Evita calcular log(0)
+	if (a != 0) and (b != 0):
+		aDec = decimal.Decimal(a);
+		bDec = decimal.Decimal(b).ln();
+		return aDec * bDec;
+	else:
+		return 0
+
 class Profile(object):
 	#Construtor com 8 parâmetros básicos, infere os outros 10 parâmetros a partir dos básicos.
 	def __init__(self, target, context, targetContextCount, targetCount, contextCount, entropy_target, entropy_context, nPairs):
@@ -60,14 +68,6 @@ class Profile(object):
 
 	def expected(self, cw1, cw2, n):
 		return decimal.Decimal( (cw1 * cw2)/n );
-
-	def PRODLOG(self, a, b): #Evita calcular log(0)
-		if (a != 0) and (b != 0):
-			aDec = decimal.Decimal(a);
-			bDec = decimal.Decimal(b).ln();
-			return aDec * bDec;
-		else:
-			return 0
 
 	def condProb(self):
 		return self.targetContextCount / self.targetCount;
@@ -111,16 +111,16 @@ class Profile(object):
 		r1 = 0; r2 = 0; r3 = 0; r4 = 0;
 
 		if self.ew1w2 != 0:
-			r1 = self.PRODLOG( self.targetContextCount , self.targetContextCount / self.ew1w2 );
+			r1 = PRODLOG( self.targetContextCount , self.targetContextCount / self.ew1w2 );
 
 		if self.ew1nw2 != 0:
-			r2 = self.PRODLOG( self.cw1nw2             , self.cw1nw2  / self.ew1nw2  );
+			r2 = PRODLOG( self.cw1nw2             , self.cw1nw2  / self.ew1nw2  );
 
 		if self.enw1w2 != 0:
-			r3 = self.PRODLOG( self.cnw1w2             , self.cnw1w2  / self.enw1w2  );
+			r3 = PRODLOG( self.cnw1w2             , self.cnw1w2  / self.enw1w2  );
 
 		if self.enw1nw2 != 0:
-			r4 = self.PRODLOG( self.cnw1nw2            , self.cnw1nw2 / self.enw1nw2 );
+			r4 = PRODLOG( self.cnw1nw2            , self.cnw1nw2 / self.enw1nw2 );
 
 		return 2 * (r1 + r2 + r3 + r4);
 	
