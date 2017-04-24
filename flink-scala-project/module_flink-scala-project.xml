@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_flink-scala-project" default="compile.module.flink-scala-project">
+  <dirname property="module.flink-scala-project.basedir" file="${ant.file.module_flink-scala-project}"/>
+  
+  <property name="module.jdk.home.flink-scala-project" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.flink-scala-project" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.flink-scala-project" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.flink-scala-project" value="-encoding UTF-8 -source 1.6 -target 1.6 ${compiler.args}"/>
+  
+  <property name="flink-scala-project.output.dir" value="${module.flink-scala-project.basedir}/target/classes"/>
+  <property name="flink-scala-project.testoutput.dir" value="${module.flink-scala-project.basedir}/target/test-classes"/>
+  
+  <path id="flink-scala-project.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="flink-scala-project.module.production.classpath">
+    <path refid="${module.jdk.classpath.flink-scala-project}"/>
+    <path refid="library.maven:_org.apache.flink:flink-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-shaded-include-yarn:0.9.1.classpath"/>
+    <path refid="library.maven:_commons-collections:commons-collections:3.2.1.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.kryo:kryo:2.24.0.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.minlog:minlog:1.2.classpath"/>
+    <path refid="library.maven:_org.objenesis:objenesis:2.1.classpath"/>
+    <path refid="library.maven:_com.twitter:chill_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-java:0.5.2.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-java:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.avro:avro:1.7.6.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-core-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-mapper-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_com.thoughtworks.paranamer:paranamer:2.3.classpath"/>
+    <path refid="library.maven:_org.xerial.snappy:snappy-java:1.0.5.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-compress:1.4.1.classpath"/>
+    <path refid="library.maven:_org.tukaani:xz:1.0.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-avro_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-bijection_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-core_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-avro_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_de.javakaffee:kryo-serializers:0.27.classpath"/>
+    <path refid="library.maven:_joda-time:joda-time:2.5.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-optimizer:0.9.1.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-reflect:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-library:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-compiler:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scalamacros:quasiquotes_2.10:2.0.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-lang3:3.3.2.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-api:1.7.7.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-log4j12:1.7.7.classpath"/>
+    <path refid="library.maven:_log4j:log4j:1.2.17.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-math:2.2.classpath"/>
+    <path refid="library.maven:_org.apache.sling:org.apache.sling.commons.json:2.0.6.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-clients:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-runtime:0.9.1.classpath"/>
+    <path refid="library.maven:_com.amazonaws:aws-java-sdk:1.8.1.classpath"/>
+    <path refid="library.maven:_commons-logging:commons-logging:1.1.1.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpclient:4.2.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpcore:4.2.classpath"/>
+    <path refid="library.maven:_commons-codec:commons-codec:1.3.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-core:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-databind:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-annotations:2.1.1.classpath"/>
+    <path refid="library.maven:_io.netty:netty-all:4.0.27.final.classpath"/>
+    <path refid="library.maven:_org.javassist:javassist:3.18.1-ga.classpath"/>
+    <path refid="library.maven:_org.codehaus.jettison:jettison:1.1.classpath"/>
+    <path refid="library.maven:_stax:stax-api:1.0.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-actor_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_com.typesafe:config:1.2.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-remote_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_io.netty:netty:3.8.0.final.classpath"/>
+    <path refid="library.maven:_com.google.protobuf:protobuf-java:2.5.0.classpath"/>
+    <path refid="library.maven:_org.uncommons.maths:uncommons-maths:1.2.2a.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-slf4j_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_org.clapper:grizzled-slf4j_2.10:1.0.2.classpath"/>
+    <path refid="library.maven:_com.github.scopt:scopt_2.10:3.2.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-core:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-jvm:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-json:3.1.0.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-server:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.mortbay.jetty:servlet-api:3.0.20100224.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-continuation:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-http:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-io:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-util:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-security:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-servlet:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_commons-fileupload:commons-fileupload:1.3.1.classpath"/>
+    <path refid="library.maven:_commons-io:commons-io:2.4.classpath"/>
+    <path refid="library.maven:_commons-cli:commons-cli:1.2.classpath"/>
+  </path>
+  
+  <path id="flink-scala-project.runtime.production.module.classpath">
+    <pathelement location="${flink-scala-project.output.dir}"/>
+    <path refid="library.maven:_org.apache.flink:flink-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-shaded-include-yarn:0.9.1.classpath"/>
+    <path refid="library.maven:_commons-collections:commons-collections:3.2.1.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.kryo:kryo:2.24.0.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.minlog:minlog:1.2.classpath"/>
+    <path refid="library.maven:_org.objenesis:objenesis:2.1.classpath"/>
+    <path refid="library.maven:_com.twitter:chill_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-java:0.5.2.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-java:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.avro:avro:1.7.6.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-core-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-mapper-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_com.thoughtworks.paranamer:paranamer:2.3.classpath"/>
+    <path refid="library.maven:_org.xerial.snappy:snappy-java:1.0.5.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-compress:1.4.1.classpath"/>
+    <path refid="library.maven:_org.tukaani:xz:1.0.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-avro_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-bijection_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-core_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-avro_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_de.javakaffee:kryo-serializers:0.27.classpath"/>
+    <path refid="library.maven:_joda-time:joda-time:2.5.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-optimizer:0.9.1.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-reflect:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-library:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-compiler:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scalamacros:quasiquotes_2.10:2.0.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-lang3:3.3.2.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-api:1.7.7.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-log4j12:1.7.7.classpath"/>
+    <path refid="library.maven:_log4j:log4j:1.2.17.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-math:2.2.classpath"/>
+    <path refid="library.maven:_org.apache.sling:org.apache.sling.commons.json:2.0.6.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-clients:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-runtime:0.9.1.classpath"/>
+    <path refid="library.maven:_com.amazonaws:aws-java-sdk:1.8.1.classpath"/>
+    <path refid="library.maven:_commons-logging:commons-logging:1.1.1.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpclient:4.2.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpcore:4.2.classpath"/>
+    <path refid="library.maven:_commons-codec:commons-codec:1.3.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-core:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-databind:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-annotations:2.1.1.classpath"/>
+    <path refid="library.maven:_io.netty:netty-all:4.0.27.final.classpath"/>
+    <path refid="library.maven:_org.javassist:javassist:3.18.1-ga.classpath"/>
+    <path refid="library.maven:_org.codehaus.jettison:jettison:1.1.classpath"/>
+    <path refid="library.maven:_stax:stax-api:1.0.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-actor_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_com.typesafe:config:1.2.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-remote_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_io.netty:netty:3.8.0.final.classpath"/>
+    <path refid="library.maven:_com.google.protobuf:protobuf-java:2.5.0.classpath"/>
+    <path refid="library.maven:_org.uncommons.maths:uncommons-maths:1.2.2a.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-slf4j_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_org.clapper:grizzled-slf4j_2.10:1.0.2.classpath"/>
+    <path refid="library.maven:_com.github.scopt:scopt_2.10:3.2.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-core:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-jvm:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-json:3.1.0.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-server:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.mortbay.jetty:servlet-api:3.0.20100224.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-continuation:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-http:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-io:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-util:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-security:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-servlet:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_commons-fileupload:commons-fileupload:1.3.1.classpath"/>
+    <path refid="library.maven:_commons-io:commons-io:2.4.classpath"/>
+    <path refid="library.maven:_commons-cli:commons-cli:1.2.classpath"/>
+  </path>
+  
+  <path id="flink-scala-project.module.classpath">
+    <path refid="${module.jdk.classpath.flink-scala-project}"/>
+    <pathelement location="${flink-scala-project.output.dir}"/>
+    <path refid="library.maven:_org.apache.flink:flink-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-shaded-include-yarn:0.9.1.classpath"/>
+    <path refid="library.maven:_commons-collections:commons-collections:3.2.1.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.kryo:kryo:2.24.0.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.minlog:minlog:1.2.classpath"/>
+    <path refid="library.maven:_org.objenesis:objenesis:2.1.classpath"/>
+    <path refid="library.maven:_com.twitter:chill_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-java:0.5.2.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-java:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.avro:avro:1.7.6.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-core-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-mapper-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_com.thoughtworks.paranamer:paranamer:2.3.classpath"/>
+    <path refid="library.maven:_org.xerial.snappy:snappy-java:1.0.5.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-compress:1.4.1.classpath"/>
+    <path refid="library.maven:_org.tukaani:xz:1.0.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-avro_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-bijection_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-core_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-avro_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_de.javakaffee:kryo-serializers:0.27.classpath"/>
+    <path refid="library.maven:_joda-time:joda-time:2.5.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-optimizer:0.9.1.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-reflect:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-library:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-compiler:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scalamacros:quasiquotes_2.10:2.0.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-lang3:3.3.2.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-api:1.7.7.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-log4j12:1.7.7.classpath"/>
+    <path refid="library.maven:_log4j:log4j:1.2.17.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-math:2.2.classpath"/>
+    <path refid="library.maven:_org.apache.sling:org.apache.sling.commons.json:2.0.6.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-clients:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-runtime:0.9.1.classpath"/>
+    <path refid="library.maven:_com.amazonaws:aws-java-sdk:1.8.1.classpath"/>
+    <path refid="library.maven:_commons-logging:commons-logging:1.1.1.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpclient:4.2.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpcore:4.2.classpath"/>
+    <path refid="library.maven:_commons-codec:commons-codec:1.3.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-core:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-databind:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-annotations:2.1.1.classpath"/>
+    <path refid="library.maven:_io.netty:netty-all:4.0.27.final.classpath"/>
+    <path refid="library.maven:_org.javassist:javassist:3.18.1-ga.classpath"/>
+    <path refid="library.maven:_org.codehaus.jettison:jettison:1.1.classpath"/>
+    <path refid="library.maven:_stax:stax-api:1.0.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-actor_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_com.typesafe:config:1.2.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-remote_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_io.netty:netty:3.8.0.final.classpath"/>
+    <path refid="library.maven:_com.google.protobuf:protobuf-java:2.5.0.classpath"/>
+    <path refid="library.maven:_org.uncommons.maths:uncommons-maths:1.2.2a.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-slf4j_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_org.clapper:grizzled-slf4j_2.10:1.0.2.classpath"/>
+    <path refid="library.maven:_com.github.scopt:scopt_2.10:3.2.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-core:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-jvm:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-json:3.1.0.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-server:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.mortbay.jetty:servlet-api:3.0.20100224.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-continuation:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-http:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-io:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-util:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-security:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-servlet:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_commons-fileupload:commons-fileupload:1.3.1.classpath"/>
+    <path refid="library.maven:_commons-io:commons-io:2.4.classpath"/>
+    <path refid="library.maven:_commons-cli:commons-cli:1.2.classpath"/>
+  </path>
+  
+  <path id="flink-scala-project.runtime.module.classpath">
+    <pathelement location="${flink-scala-project.testoutput.dir}"/>
+    <pathelement location="${flink-scala-project.output.dir}"/>
+    <path refid="library.maven:_org.apache.flink:flink-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-shaded-include-yarn:0.9.1.classpath"/>
+    <path refid="library.maven:_commons-collections:commons-collections:3.2.1.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.kryo:kryo:2.24.0.classpath"/>
+    <path refid="library.maven:_com.esotericsoftware.minlog:minlog:1.2.classpath"/>
+    <path refid="library.maven:_org.objenesis:objenesis:2.1.classpath"/>
+    <path refid="library.maven:_com.twitter:chill_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-java:0.5.2.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-java:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.avro:avro:1.7.6.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-core-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_org.codehaus.jackson:jackson-mapper-asl:1.9.13.classpath"/>
+    <path refid="library.maven:_com.thoughtworks.paranamer:paranamer:2.3.classpath"/>
+    <path refid="library.maven:_org.xerial.snappy:snappy-java:1.0.5.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-compress:1.4.1.classpath"/>
+    <path refid="library.maven:_org.tukaani:xz:1.0.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-avro_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:chill-bijection_2.10:0.5.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-core_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_com.twitter:bijection-avro_2.10:0.7.2.classpath"/>
+    <path refid="library.maven:_de.javakaffee:kryo-serializers:0.27.classpath"/>
+    <path refid="library.maven:_joda-time:joda-time:2.5.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-optimizer:0.9.1.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-reflect:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-library:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scala-lang:scala-compiler:2.10.4.classpath"/>
+    <path refid="library.maven:_org.scalamacros:quasiquotes_2.10:2.0.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-lang3:3.3.2.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-api:1.7.7.classpath"/>
+    <path refid="library.maven:_org.slf4j:slf4j-log4j12:1.7.7.classpath"/>
+    <path refid="library.maven:_log4j:log4j:1.2.17.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-scala:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-streaming-core:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.commons:commons-math:2.2.classpath"/>
+    <path refid="library.maven:_org.apache.sling:org.apache.sling.commons.json:2.0.6.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-clients:0.9.1.classpath"/>
+    <path refid="library.maven:_org.apache.flink:flink-runtime:0.9.1.classpath"/>
+    <path refid="library.maven:_com.amazonaws:aws-java-sdk:1.8.1.classpath"/>
+    <path refid="library.maven:_commons-logging:commons-logging:1.1.1.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpclient:4.2.classpath"/>
+    <path refid="library.maven:_org.apache.httpcomponents:httpcore:4.2.classpath"/>
+    <path refid="library.maven:_commons-codec:commons-codec:1.3.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-core:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-databind:2.1.1.classpath"/>
+    <path refid="library.maven:_com.fasterxml.jackson.core:jackson-annotations:2.1.1.classpath"/>
+    <path refid="library.maven:_io.netty:netty-all:4.0.27.final.classpath"/>
+    <path refid="library.maven:_org.javassist:javassist:3.18.1-ga.classpath"/>
+    <path refid="library.maven:_org.codehaus.jettison:jettison:1.1.classpath"/>
+    <path refid="library.maven:_stax:stax-api:1.0.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-actor_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_com.typesafe:config:1.2.1.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-remote_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_io.netty:netty:3.8.0.final.classpath"/>
+    <path refid="library.maven:_com.google.protobuf:protobuf-java:2.5.0.classpath"/>
+    <path refid="library.maven:_org.uncommons.maths:uncommons-maths:1.2.2a.classpath"/>
+    <path refid="library.maven:_com.typesafe.akka:akka-slf4j_2.10:2.3.7.classpath"/>
+    <path refid="library.maven:_org.clapper:grizzled-slf4j_2.10:1.0.2.classpath"/>
+    <path refid="library.maven:_com.github.scopt:scopt_2.10:3.2.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-core:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-jvm:3.1.0.classpath"/>
+    <path refid="library.maven:_io.dropwizard.metrics:metrics-json:3.1.0.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-server:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.mortbay.jetty:servlet-api:3.0.20100224.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-continuation:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-http:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-io:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-util:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-security:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_org.eclipse.jetty:jetty-servlet:8.0.0.m1.classpath"/>
+    <path refid="library.maven:_commons-fileupload:commons-fileupload:1.3.1.classpath"/>
+    <path refid="library.maven:_commons-io:commons-io:2.4.classpath"/>
+    <path refid="library.maven:_commons-cli:commons-cli:1.2.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.flink-scala-project">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.flink-scala-project">
+    <patternset refid="excluded.from.module.flink-scala-project"/>
+  </patternset>
+  
+  <path id="flink-scala-project.module.sourcepath">
+    <dirset dir="${module.flink-scala-project.basedir}">
+      <include name="src/main/resources"/>
+      <include name="src/main/scala"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.flink-scala-project" depends="compile.module.flink-scala-project.production,compile.module.flink-scala-project.tests" description="Compile module flink-scala-project"/>
+  
+  <target name="compile.module.flink-scala-project.production" depends="register.custom.compilers" description="Compile module flink-scala-project; production classes">
+    <mkdir dir="${flink-scala-project.output.dir}"/>
+    <javac2 destdir="${flink-scala-project.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.flink-scala-project}/javac">
+      <compilerarg line="${compiler.args.flink-scala-project}"/>
+      <bootclasspath refid="flink-scala-project.module.bootclasspath"/>
+      <classpath refid="flink-scala-project.module.production.classpath"/>
+      <src refid="flink-scala-project.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.flink-scala-project"/>
+    </javac2>
+    
+    <copy todir="${flink-scala-project.output.dir}">
+      <fileset dir="${module.flink-scala-project.basedir}/src/main/resources">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.flink-scala-project.basedir}/src/main/scala">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.flink-scala-project.tests" depends="register.custom.compilers,compile.module.flink-scala-project.production" description="compile module flink-scala-project; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.flink-scala-project" description="cleanup module">
+    <delete dir="${flink-scala-project.output.dir}"/>
+    <delete dir="${flink-scala-project.testoutput.dir}"/>
+  </target>
+</project>
