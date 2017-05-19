@@ -9,3 +9,5 @@ flink-scala-project/target/flink-scala-project-0.1.jar
 flink-scala-project/target/original-flink-scala-project-0.1.jar
 
 *.class
+
+*.class
