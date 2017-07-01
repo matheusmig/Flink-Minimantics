@@ -12,11 +12,19 @@ import collection.JavaConversions._
 import java.util.concurrent.TimeUnit
 import java.text.DecimalFormat
 
-import org.apache.flink.api.common.operators.base.JoinOperatorBase.JoinHint
+import org.apache.flink.api.common.operators.Order
 
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
+import java.util.zip.Deflater
+import java.util.zip.Inflater
+import java.io.ByteArrayOutputStream
+
+import java.io.{ByteArrayOutputStream, ByteArrayInputStream}
+import java.util.zip.{GZIPOutputStream, GZIPInputStream}
+
+import scala.util.Try
 
 /******************************************************
   **           Main Function
@@ -100,8 +108,14 @@ object Minimantics {
 
     // Lê input file linha a linha, dividindo a linha em uma tupla chamada pairWords = (targetWord, contextWord)
     val pairWords: DataSet[(String, String, Int)] =
-      input.map { str => str.split(" ")}
-           .map { tup => ( tup(0), tup(1) , 1) }
+      input.flatMap{ (line, out: Collector[(String,String,Int)]) => {
+        if (line.contains(" ")) {
+          line.split(" ") match {
+            case Array(a, b) => out.collect((a, b, 1))
+            case _ => out.collect(("", "", 0))
+          }
+        }
+      }}
 
     // Filtering, sorting and uniquing raw triples in inputfile
 	  // targets word count, filtering targets that occur more than threshold,
@@ -202,6 +216,7 @@ object Minimantics {
     val nSimThreshold   = params.getDouble("S",-9999.0)
     val nDistThreshold  = params.getDouble("D",-9999.0)
     val bCalculateDist  = params.has("calculateDistances")
+    val bCompressData   = params.has("compressData")
 
     //Processa entrada
     val profiles : DataSet[(
@@ -211,7 +226,7 @@ object Minimantics {
       //Esperamos ler Linhas com 18 elementos
       input.map{x => x.split("\t")  match {
         case Array(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s) => (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s)
-        case _ => ("","","","","","","","","","","","","","","","","","","")
+        case _ => ("","","","","0","","","","","","","","","","","","","","")
       }}
 
     // Os seguintes itens estao acessiveis nas respectivas posicoes:
@@ -229,12 +244,11 @@ object Minimantics {
       filteredData.writeAsText(strOutputFile + ".SimilarityFilteredData.txt", WriteMode.OVERWRITE)
 
     //Primeiramente mapearemos para as tuplas e depois faremos o agrupamento dos targets iguais
-    val targetContextsWithZipIndex = filteredData.map{ x => (x._1, x._5.toDouble, x._3) }
-      .groupBy(0).reduceGroup(reducer = TargetContextsGrouperWithZipIndex)
+    val targetContextsWithZipIndex = filteredData.map{ x => (x._1, x._5.toInt, x._3) }
+      .groupBy(0).reduceGroup(reducer = TargetContextsGrouperWithZipIndex(bCompressData))
 
     if (bGenSteps)
       targetContextsWithZipIndex.writeAsText(strOutputFile + ".SimilarityTargetContexts.txt", WriteMode.OVERWRITE)
-
 
     // here we generate the join set where we say that (idx, element) will be joined with all
     // elements whose index is at most idx
@@ -248,7 +262,20 @@ object Minimantics {
     // doing the join operation
     val CalculatedSimilarities = targetContextsWithZipIndex.joinWithHuge(joinSet).where(_._1).equalTo(_._1).apply {
        (a, b) => {
-         SimilarityCalculator(a._2._1, a._2._2._1, a._2._2._2, a._2._2._3, b._2._1, b._2._2._1, b._2._2._2, b._2._2._3, bCalculateDist)
+         if (bCompressData) {
+           val mapDecompressedA = deserializeMap(a._2._2._3.asInstanceOf[String])
+           val mapDecompressedB = deserializeMap(b._2._2._3.asInstanceOf[String])
+           val targetA = a._2._1.asInstanceOf[String]
+           val targetB = b._2._1.asInstanceOf[String]
+
+           SimilarityCalculator(targetA, a._2._2._1, a._2._2._2, mapDecompressedA, targetB, b._2._2._1, b._2._2._2, mapDecompressedB , bCalculateDist)
+         } else {
+           val targetA = a._2._1.asInstanceOf[String]
+           val targetB = b._2._1.asInstanceOf[String]
+           val dictA   = a._2._2._3.asInstanceOf[Map[String,Int]]
+           val dictB   = b._2._2._3.asInstanceOf[Map[String,Int]]
+           SimilarityCalculator(targetA, a._2._2._1, a._2._2._2, dictA, targetB, b._2._2._1, b._2._2._2, dictB , bCalculateDist)
+         }
        }
     }
 
@@ -262,69 +289,18 @@ object Minimantics {
 
   }
 
-  private def EvaluateThesaurus(env: ExecutionEnvironment, params: ParameterTool, input: DataSet[(String)]) : DataSet[String] = {
+  private def EvaluateThesaurus(env: ExecutionEnvironment, params: ParameterTool, input: DataSet[(String)]) : DataSet[(String, String, Double)] = {
     //Estamos levando em consideração apenas a medida de Cosine
 
-    /*//Initializations
-    val strComplexWord = params.get("complexWord", "" )
-    val nSynonyms      = params.getInt("synonymsCount", 5)
-    val InputSentences : DataSet[String] =
-      if (params.has("sentence")){
-        val strInputSentence = params.getRequired("sentence")
-        env.fromElements(strInputSentence)
-      } else {
-        val strSentencesFile = params.getRequired("sentencesFile")
-        env.readTextFile(strSentencesFile)
-      }
-
-    //Process input
-    val thesaurus : DataSet[(String,String,String,String,String,String,String,String,String,String,String)] =
-      //Expected 11 elements per line
-      input.map{x => x.split("\t")  match {
-        case Array(a,b,c,d,e,f,g,h,i,j,k) => (a,b,c,d,e,f,g,h,i,j,k)
-        case _ => ("","","","","","","","","","","")
-      }}
-
-    //Sort input Thesaurus and take the best synonyms
-    val filteredThesaurus = thesaurus.filter { x => x._1 == strComplexWord}
-    val extractedSynonyms = filteredThesaurus.groupBy(0).reduceGroup{
-      (in, out: Collector[(String, ArrayBuffer[(String,Float)])]) =>
-        var lstBestSynonyms = ArrayBuffer[(String,Float)]()
-        var strTarget = ""
-        for (t <- in) {
-          strTarget      = t._1
-          val strContext = t._2
-          val fCosine    = t._3.toFloat  //Estamos levando em consideração apenas a medida de Cosine
-
-          if (lstBestSynonyms.length < nSynonyms){
-            lstBestSynonyms += ((strContext, fCosine))
-            lstBestSynonyms = lstBestSynonyms.sortWith( (x,y) => x._2 > y._2 )
-          } else {
-            lstBestSynonyms.remove(lstBestSynonyms.length-1)
-            lstBestSynonyms += ((strContext, fCosine))
-            lstBestSynonyms = lstBestSynonyms.sortWith( (x,y) => x._2 > y._2 )
-          }
-        }
-        out.collect(strTarget, lstBestSynonyms)
-    }
-
-    //Take the synonyms of the complex word
-    //var arSynonyms = ArrayBuffer[(String,Float)]()
-    //val extractedSynonyms = sortedThesaurus.filter(x => x._1 == strComplexWord)
-
-    // Substitute in the sentence
-    val GeneratedSentences = InputSentences.flatMap( new Synonymer(strComplexWord) ).withBroadcastSet(extractedSynonyms, "extractedSynonyms")
-
-    GeneratedSentences*/
     //Initializations
     val bGenSteps       = params.has("steps")
     val strOutputFile   = params.getRequired("o")
     val strComplexWord  = params.get("complexWord", "" )      //Palavra alvo a ser substituída
-    val nSynonyms       = params.getInt("synonymsCount", 5)   //Número de sinônimos que iremos gerar
+    val nSynonyms       = params.getInt("synonymsCount", 10)  //Número de sinônimos que iremos gerar
     val nThesaurusSize  = params.getInt("thesaurusSize", 50)  //Número de tuplas que pegaremos do thesauro criado em CalcSimilarity
     val strFreqFile     = params.get("freqFile", "")          //Nome do arquivo de frequencias
     val strTrigramsFile = params.get("trigramFile", "")       //Nome do arquivo de TriGrams
-    val nNGram          = params.getInt("N", 3)               //Número de elementos em cada tupla do NGram
+    val bGroupedTrigram = params.has("trigramGrouped")        //Flag que indica se o arquivo de Trigram já estava agrupado
     val InputSentences  : DataSet[String] =                   //Frase de entrada
       if (params.has("sentence")){
         val strInputSentence = params.getRequired("sentence")
@@ -338,40 +314,54 @@ object Minimantics {
     //Lê tesauro de entrada e separa as N tuplas mais similares a palavra alvo
     //Campos: ('Target', 'Neighbor', 'CosineSimilarity')
     val dsReducedThesaurus : DataSet[(String,String, Double)] =
-      input.map{x => x.split("\t")  match {
-        case Array(a,b,c,d,e,f,g,h,i,j,k)   => (a,b,c.toDouble) //Tesauro de entrada foi gerado no passo CalcSimilarity
-        case Array(a,b,c,d,e,f,g,h,i,j,k,l) => (a,c,e.toDouble) //Tesauro de entrada foi gerado no algoritmo original
-        case _                              => ("","",0.0)
-      }}.filter{ _._1 == strComplexWord }
+    input.flatMap{ (line,out: Collector[(String,String,Double)]) => {
+        line.split("\t")  match {
+          case Array(a,b,c,d,e,f,g,h,i,j,k)   => if (a == strComplexWord) out.collect((a,b,c.toDouble)) //Tesauro de entrada foi gerado no passo CalcSimilarity
+          case Array(a,b,c,d,e,f,g,h,i,j,k,l) => if (a == strComplexWord) out.collect((a,c,e.toDouble)) //Tesauro de entrada foi gerado no algoritmo original
+        }
+    }}.groupBy(0)
+      .sortGroup(2, Order.DESCENDING)
+      .first(nThesaurusSize)
 
     //Lê arquivo de frequencia
     //Campos: ('palavra', frequencia)
     val dsFrequencies : DataSet[(String,Double)] =
-      env.readTextFile(strFreqFile)
-         .map{line => line.split(" ") match {
-           case Array(a, b) => (a, b.toDouble)
-           case _ => ("",0)
-         }}
+    env.readTextFile(strFreqFile)
+      .map{line => line.split(" ") match {
+        case Array(a, b) => (a.toLowerCase, b.toDouble)
+        case _ => ("",0)
+      }}
 
     //Lê TriGram e faz o count de quantas triplas iguais temos
     //Campos: ('word-1', 'word', 'word+1', count)
     val dsTriGram : DataSet[(String,String,String, Int)] =
-      env.readTextFile(strTrigramsFile)
-        .map{line => line.split(" ") match {
-          case Array(a, b, c) => (a, b, c)
-          case _ => ("","","")
-        }}
-        .filter{x => x._2 == strComplexWord}
-        .map{ x => (x, 1) }
-        .groupBy(0)
-        .reduceGroup(reducer = AdderGroupReduce[(String,String,String)])
-        .map{ x => (x._1._1,x._1._2,x._1._3,x._2) }
+      if (bGroupedTrigram){
+        env.readTextFile(strTrigramsFile)
+          .map { line =>
+            line.split(",") match {
+              case Array(a, b, c, d) => (a.toLowerCase, b.toLowerCase, c.toLowerCase, d.toInt)
+              case _ => ("", "", "", 1)
+            }
+          }
+      } else {
+        env.readTextFile(strTrigramsFile)
+          .map { line =>
+            line.split(" ") match {
+              case Array(a, b, c) => ((a.toLowerCase, b.toLowerCase, c.toLowerCase), 1)
+              case _ => (("", "", ""), 1)
+            }
+          }
+          .groupBy(0)
+          .reduceGroup(reducer = AdderGroupReduce[(String, String, String)])
+          .map { x => (x._1._1, x._1._2, x._1._3, x._2) }
+      }
 
 
     //Obtem a freqüência de cada um dos M vizinhos da palavra alvo.
     //Campos: ('Target', 'Neighbor', CosineSimilarity, frequencyNeighbor)
     val F : DataSet[(String,String,Double,Double)] =
-      dsReducedThesaurus.join(dsFrequencies).where(1).equalTo(0){(dataset1, dataset2) => (dataset1._1, dataset1._2, dataset1._3, dataset2._2)}
+    dsReducedThesaurus.join(dsFrequencies).where(1).equalTo(0){(dataset1, dataset2) => (dataset1._1, dataset1._2, dataset1._3, dataset2._2)}
+      .sortPartition(3, Order.DESCENDING)
 
     //Obtem o contexto da(s) frase(s) de entrada
     //Contexto é (alvo-1, ALVO, alvo+1)
@@ -379,44 +369,100 @@ object Minimantics {
       if (line contains strComplexWord){
         val arLine = line.split(" ")
         val nTargetPos = arLine.indexOf(strComplexWord)
-        if ((nTargetPos > 0) && (nTargetPos < arLine.length)){
-          val strTargetMinus1 = arLine(nTargetPos-1)
-          val strTarget       = arLine(nTargetPos)
-          val strTargetPlus1  = arLine(nTargetPos+1)
-          out.collect((strTargetMinus1, strTarget, strTargetPlus1))
+
+        var strTargetMinus1 = ""
+        var strTarget       = strComplexWord
+        var strTargetPlus1  = ""
+        if (nTargetPos > 0) {
+          if (nTargetPos == 0) {
+            strTargetMinus1 = ""
+            strTarget       = arLine(nTargetPos)
+            strTargetPlus1  = arLine(nTargetPos+1)
+          } else if (nTargetPos == arLine.length-1) {
+            strTargetMinus1 = arLine(nTargetPos-1)
+            strTarget       = arLine(nTargetPos)
+            strTargetPlus1  = ""
+          } else {
+            strTargetMinus1 = arLine(nTargetPos - 1)
+            strTarget = arLine(nTargetPos)
+            strTargetPlus1 = arLine(nTargetPos + 1)
+          }
         }
+        out.collect((strTargetMinus1.toLowerCase, strTarget.toLowerCase, strTargetPlus1.toLowerCase))
       }
     }}
 
-    //Filtra os trigrams que tem mesmo contexto que a frase de entrada
-    //val aq : DataSet[((String,String,String), Int)]  = dsTriGram.filter{ _._1._1 == strTargetMinus1 }.filter{ _._1._3 == strTargetPlus1 }
-    val aq = dsTriGram.join(ContextInputs).where(0).equalTo(0){  (dataset1, dataset2) => dataset1 }
-                      .join(ContextInputs).where(2).equalTo(2){  (dataset1, dataset2) => dataset1 }
+    //Filtra os trigrams que tem mesmo contexto que a frase de entrada,
+    // e em seguida filtra os que tem a palavra w, de (w-1 w w+1), igual aos neighbors da palavra alvo
+    val LM = dsTriGram.join(ContextInputs).where(0).equalTo(0){  (dataset1, dataset2) => dataset1 }
+      .join(ContextInputs).where(2).equalTo(2){  (dataset1, dataset2) => dataset1 }
+      .join(dsReducedThesaurus).where(1).equalTo(1){ (dataset1, dataset2) => dataset1 }
 
-    val LM = aq.join(dsReducedThesaurus).where(1).equalTo(1){ (dataset1, dataset2) => dataset1 }
 
+    //Nesta parte já possuímos F e LM, usaremos suas informaçoes para inferir os melhores vizinhos da palavra alvo
+    // F  = ('Target",'Neighbor', cosine, frequency)
+    // LM = (w-1 wNeighbor w+1, count)
+    val Evaluation = F.leftOuterJoin(LM).where(1).equalTo(1) {
+      // Bônus Para cada vez que a palavra aparece no contexto : similaridade * frequencia
+      (dataset1, dataset2) =>
+        if (dataset2 != null) {
+          val nContextBonus = dataset1._3 + log(dataset2._4 + 1) //Bonus de contexto = similaridade +ln(nContextCount)
+          val finalScore = (nContextBonus + log(dataset1._4)/10) //Score Final = Bonus contexto + ln(Frequency)/10
+          (dataset1._1, dataset1._2, finalScore)
+        } else {
+          val finalScore = (dataset1._3  + log(dataset1._4)/10)  //Score Final = Similaridade + ln(Frequency)/10
+          (dataset1._1, dataset1._2, finalScore)
+        }
+    }.groupBy(0)
+      .sortGroup(2, Order.DESCENDING)
+      .first(nSynonyms)
 
     if (bGenSteps) {
       F.writeAsText(strOutputFile + ".FrequencyList.txt", WriteMode.OVERWRITE)
       LM.writeAsText(strOutputFile + ".LM.txt", WriteMode.OVERWRITE)
-      aq.writeAsText(strOutputFile + ".aq.txt", WriteMode.OVERWRITE)
       dsReducedThesaurus.writeAsText(strOutputFile + ".reducedThesaurus.txt", WriteMode.OVERWRITE)
+      Evaluation.writeAsText(strOutputFile + ".FinalEvaluation2.txt", WriteMode.OVERWRITE)
     }
 
-    env.fromElements("")
-  }
+    Evaluation
+ }
 
 private def NGramsDictionary(env: ExecutionEnvironment, params: ParameterTool, input: DataSet[(String)]) : DataSet[String] = {
-//Initializations
-val strOutputFile   = params.getRequired("o")
-val nGram           = params.getInt("N", 2)
+  //Initializations
+  val nGram              = params.getInt("N", 2)
+  val bGrouped           = params.has("group")
+  val bRemoveSpecialChar = params.has("removeSpecialChars")
 
-val nGramDictionary = input.flatMap(
-  (x : String, out: Collector[String]) => {
-    x.split(' ').sliding(nGram).foreach( p => out.collect(p.mkString(" ")))
-  }
-)
-nGramDictionary
+  val nGramDictionary =
+    if (bGrouped) {
+      input.flatMap(
+        (x : String, out: Collector[(String, Int)]) => {
+          if (bRemoveSpecialChar) {
+            x.replaceAll("[~!@#$^%&*\\\\(\\\\)_+={}\\\\[\\\\]|;:\\\"'<,>.?`/\\\\\\\\-]", "")  //Remove caracteres especiais
+              .replaceAll(" +", " ")                                                          //Remove espaços duplos
+              .split(' ').sliding(nGram).foreach( p => out.collect((p.mkString(","),1)))
+          } else {
+            x.split(' ').sliding(nGram).foreach( p => out.collect((p.mkString(","),1)))
+          }
+        }
+      ).groupBy(0)
+       .reduceGroup(reducer = AdderGroupReduce[(String)])
+       .map(x => (x._1+','+x._2.toString))
+    } else {
+      input.flatMap(
+        (x : String, out: Collector[String]) => {
+          if (bRemoveSpecialChar) {
+            x.replaceAll("[~!@#$^%&*\\\\(\\\\)_+={}\\\\[\\\\]|;:\\\"'<,>.?`/\\\\\\\\-]", "")  //Remove caracteres especiais
+              .replaceAll(" +", " ")                                                          //Remove espaços duplos
+              .split(' ').sliding(nGram).foreach( p => out.collect(p.mkString(" ")))
+          } else {
+            x.split(' ').sliding(nGram).foreach( p => out.collect(p.mkString(" ")))
+          }
+        }
+      )
+    }
+
+  nGramDictionary
 }
 
 
@@ -475,25 +521,31 @@ override def reduce(values: java.lang.Iterable[(String, String, Int)], out: Coll
 }
 }
 
-private def TargetContextsGrouperWithZipIndex = new GroupReduceFunction[(String, Double, String), (Int,(String, (Double, Double, scala.collection.mutable.Map[String,Double])))] {
-var nUniqueId = 0
+private def TargetContextsGrouperWithZipIndex(bCompress : Boolean) = new GroupReduceFunction[(String, Int, String), (Int,(Any, (Int, Int, Any)))] {
+  var nUniqueId = 0
 
-override def reduce(values: java.lang.Iterable[(String, Double, String)], out: Collector[(Int, (String, (Double, Double, scala.collection.mutable.Map[String,Double])))]): Unit = {
-  var strTarget    = " "
-  var nSum 	       = 0.0
-  var nSumSquare   = 0.0
-  var dictContexts = scala.collection.mutable.Map[String,Double]()
+  override def reduce(values: java.lang.Iterable[(String, Int, String)], out: Collector[(Int, (Any, (Int, Int, Any)))]): Unit = {
+    var strTarget    = " "
+    var nSum 	       = 0
+    var nSumSquare   = 0
+    var dictContexts = scala.collection.mutable.Map[String,Int]()
 
-  for ((target, count, context) <- values){
-    strTarget  = target
-    nSum       += count
-    nSumSquare += count*count
-    dictContexts += (context -> count.toDouble)
+    for ((target, count, context) <- values){
+      strTarget  = target
+      nSum       += count
+      nSumSquare += count*count
+      dictContexts += (context -> count.toInt)
+    }
+
+    if (bCompress){
+      val compressedDict = serializeMap(dictContexts.toMap)
+      out.collect((nUniqueId, (strTarget, (nSum, nSumSquare, compressedDict))))
+    } else {
+      out.collect((nUniqueId, (strTarget, (nSum, nSumSquare, dictContexts.toMap))))
+    }
+
+    nUniqueId = nUniqueId + 1
   }
-
-  out.collect((nUniqueId, (strTarget, (nSum, nSumSquare, dictContexts))))
-  nUniqueId = nUniqueId + 1
-}
 }
 
 private def EntropyCalculator = new FlatMapFunction[(String, (scala.collection.mutable.Map[String,Int], Int)),(String,Int,Double)] {
@@ -543,8 +595,8 @@ def filter(value: Similarity) : Boolean = {
 }
 }
 
-private def SimilarityCalculator(strTarget1 : String, nSum1 : Double, nSquareSum1 : Double, dictContexts1 : scala.collection.mutable.Map[String,Double],
-                                strTarget2 : String, nSum2 : Double, nSquareSum2 : Double, dictContexts2 : scala.collection.mutable.Map[String,Double], bCalcDistance : Boolean) : Similarity = {
+private def SimilarityCalculator(strTarget1 : String, nSum1 : Int, nSquareSum1 : Int, dictContexts1 : Map[String,Int],
+                                 strTarget2 : String, nSum2 : Int, nSquareSum2 : Int, dictContexts2 : Map[String,Int], bCalcDistance : Boolean) : Similarity = {
 
     //Inicializações
     var result : Similarity = new Similarity()
@@ -627,14 +679,50 @@ var arSynonyms : (String, ArrayBuffer[(String,Float)]) = ("", ArrayBuffer[(Strin
 /******************************************************
 **  Utils functions
 *****************************************************/
-def relativeEntropySmooth(p1 : Double, p2: Double) : Double = {
-val ALPHA  = 0.99  //Smoothing factors for a-skewness measure
-val NALPHA = 0.01
-if (p1 == 0.0)
-  0.0 //If p1=0, then product is 0. If p2=0, then smoothed
-else
-  p1 * (log( p1 / ((ALPHA * p2) + (NALPHA * p1) )) )
-}
+  def relativeEntropySmooth(p1 : Double, p2: Double) : Double = {
+    val ALPHA  = 0.99  //Smoothing factors for a-skewness measure
+    val NALPHA = 0.01
+    if (p1 == 0.0)
+      0.0 //If p1=0, then product is 0. If p2=0, then smoothed
+    else
+      p1 * (log( p1 / ((ALPHA * p2) + (NALPHA * p1) )) )
+  }
+
+  def serializeMap(map : Map[String,Int]) : String = {
+    var strOutput = ""
+    for ((key,value) <- map){
+      if (strOutput != ""){
+        strOutput += ","
+      }
+      strOutput += key.trim+":"+value.toString
+    }
+    strOutput
+  }
+
+  def deserializeMap(strSerialized : String) : Map[String,Int] = {
+    val pairs = strSerialized.split(":|,").grouped(2)
+    val mapOutput = pairs.map { case Array(k, v) => k -> v.toInt }.toMap
+    mapOutput
+  }
+
+//Não utilizado
+  def decompress(compressed: Array[Byte]): String = {
+    val inputStream = new GZIPInputStream(new ByteArrayInputStream(compressed))
+    scala.io.Source.fromInputStream(inputStream).mkString
+  }
+
+//Não utilizado
+  def compress(input: String): Array[Byte] = {
+    val arInput = input.getBytes("UTF-8")
+    val bos = new ByteArrayOutputStream(arInput.length)
+    val gzip = new GZIPOutputStream(bos)
+    gzip.write(arInput)
+    gzip.close()
+    val compressed = bos.toByteArray
+    bos.close()
+    compressed
+  }
+
 
 /******************************************************
 **  Data Types
@@ -720,34 +808,33 @@ class Similarity(var target1  : String, var idTarget1 : Int,    var target2 : St
                var cosine   : Double, var wjaccard  : Double, var lin      : Double, var l1      : Double,
                var l2       : Double, var jsd       : Double, var randomic : Double, var askew1  : Double, var askew2 : Double){
 
-//Secondary Constructor
-def this(){
-  this("",0,"",0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0)
+  //Secondary Constructor
+  def this(){
+    this("",0,"",0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0)
+  }
+
+  override def toString : String = {
+    val formatter = new DecimalFormat("#.######") //Limita o arquivo de saída em 6 casas decimais (economia de espaço)
+
+    target1                      +"\t"+ target2                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
+      formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
+      formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2)
+
+  }
+
+
+  def toStringWithEquivalents : String = {
+    val formatter = new DecimalFormat("#.######") //Limita o arquivo de saída em 6 casas decimais (economia de espaço)
+
+      target1                    +"\t"+ target2                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
+      formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
+      formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2) +"\n"+
+      target2                    +"\t"+ target1                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
+      formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
+      formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2)
+  }
+
+
 }
-
-override def toString : String = {
-  val formatter = new DecimalFormat("#.######") //Limita o arquivo de saída em 6 casas decimais (economia de espaço)
-
-  target1                      +"\t"+ target2                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
-    formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
-    formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2)
-
-}
-
-
-def toStringWithEquivalents : String = {
-  val formatter = new DecimalFormat("#.######") //Limita o arquivo de saída em 6 casas decimais (economia de espaço)
-
-    target1                    +"\t"+ target2                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
-    formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
-    formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2) +"\n"+
-    target2                    +"\t"+ target1                  +"\t"+ formatter.format(cosine) +"\t"+ formatter.format(wjaccard) +"\t"+
-    formatter.format(lin)      +"\t"+ formatter.format(l1)     +"\t"+ formatter.format(l2)     +"\t"+ formatter.format(jsd)      +"\t"+
-    formatter.format(randomic) +"\t"+ formatter.format(askew1) +"\t"+ formatter.format(askew2)
-}
-
-
-}
-
 
 }
