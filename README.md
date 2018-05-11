@@ -15,6 +15,7 @@ A ferramenta contém 5 funções distintas, onde cada uma gera uma saída para s
 Exemplos de como executar:
 
 1) NGRAM:
+
 --trigram:
 -i "hdfs://Minimantics:50040/raw_ukwac_Full" -o "hdfs://Minimantics:50040/Trigram" -stage "NG" -N 3 -group
 
